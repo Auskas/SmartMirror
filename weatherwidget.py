@@ -71,7 +71,6 @@ class Weather:
 
     def widget(self):
         forecast = self.get_weather()
-        print(forecast)
         if forecast != None:
             temp_now = str(forecast['fact']['temp'])
             weather_icon = forecast['fact']['icon']

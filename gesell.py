@@ -18,12 +18,12 @@ from nextgame import NextGame
 from livescore import LiveScore
 from marquee import Marquee
 from weatherwidget import Weather
-from face_recognition import FaceRecognizer
+#from face_recognition import FaceRecognizer
 import threading
 from hello import Hello
 from message_widget import MessageWidget
 from youtuber import Youtuber
-from voice_assistant import VoiceAssistant
+#from voice_assistant import VoiceAssistant
 
 
 logger = logging.getLogger('Gesell')
@@ -66,13 +66,14 @@ if __name__ == '__main__':
         #faceRecognizerThread = threading.Thread(target=faceRecognizer.realtime_recognizer) # Thread 6. Updates the list of detected users.
         #faceRecognizerThread.start()
         faceRecognizer = None
-        assistant = VoiceAssistant()
-        assistantThread = threading.Thread(target=assistant.assistant)
-        assistantThread.start()
+        #assistant = VoiceAssistant()
+        #assistantThread = threading.Thread(target=assistant.assistant)
+        #assistantThread.start()
         window = Tk()
         window.title('Main Window')
         window.configure(bg='black')
-        window.overrideredirect(True)
+        # Disables closing the window by standard means, such as ALT+F4 etc.
+        #window.overrideredirect(True)
         w, h = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry("%dx%d+0+0" % (w, h))
         logger.debug('Main window has been created')
@@ -81,9 +82,11 @@ if __name__ == '__main__':
         #weather = Weather(window)
         marquee = Marquee(window, parserBot)
         spartak = Spartak(window, nextgameBot, databaseBot, liveScore)
-        stocks = Stocks(window, parserBot)
+        #stocks = Stocks(window, parserBot)
         #messageWidget = MessageWidget(window, clock, databaseBot)
-        youtubeWidget = Youtuber(window, assistant)
+        youtubeWidget = Youtuber(window)
+        youtuberThread = threading.Thread(target=youtubeWidget.status)
+        youtuberThread.start()
         window.mainloop()
     except KeyboardInterrupt:
         sys.exit()

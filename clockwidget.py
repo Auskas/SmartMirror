@@ -11,10 +11,10 @@ class Clock:
     def __init__(self, frame, database):
         self.logger = logging.getLogger('Gesell.clockwidget.Clock')
         self.logger.debug('Initializing an instance of Clock Widget...')
-        self.timeLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display Semibold", 48))
+        self.timeLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display", 48))
         self.timeLbl.place(relx=0.03, rely=0.01)
         #self.timeLbl.grid(row=0, column=0, sticky='w', padx=10)
-        self.dateLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display Semibold", 28))
+        self.dateLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display", 28))
         self.dateLbl.place(relx=0.03, rely=0.1)
         #self.dateLbl.grid(row=1, column=0, sticky='w', padx=10, ipady=7)
         self.months = {1: 'января', 2: 'февраля', 3: 'марта', 4: 'апреля', 5: 'мая', 6: 'июня',
