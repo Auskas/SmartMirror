@@ -12,28 +12,33 @@ import threading
 import urllib.request
 import urllib.parse
 import re
+import time
+import alsaaudio
 
 class Youtuber:
 
-    def __init__(self, window):
+    def __init__(self, window, gesturesAssistant, voiceAssistant, waveWidget):
+        self.logger = logging.getLogger('Gesell.youtuber.Youtuber')
         self.window = window
+        self.gesturesAssistant = gesturesAssistant
+        self.waveWidget = waveWidget
         # self.w and self.h are the dimension of the main window. They are used to switch the video into fullscreen mode.
         self.w, self.h = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
-        #self.assistant = assistant
+        self.voiceAssistant = voiceAssistant
         _isMacOS   = sys.platform.startswith('darwin')
         _isWindows = sys.platform.startswith('win')
         _isLinux = sys.platform.startswith('linux')
-        args = ['--ts-seek-percent', '--video-wallpaper', '--ts-seek-percent',
-                '--play-and-exit', '--verbose=0', '--vout=X11'] #,'--no-ts-trust-pcr', '--aout=alsa']
+        args = ['--no-ts-trust-pcr', '--ts-seek-percent', '--video-wallpaper', '--ts-seek-percent',
+                '--play-and-exit', '--verbose=0', '--vout=X11'] #,, '--aout=alsa']
         if _isLinux:
             args.append('--no-xlib')
             
         # Below are some Youtube links for testing purposes. Leave one uncommented to see it on the screen.
         #self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
-        #self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
+        self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
         #self.url = str('https://www.youtube.com/watch?v=BkNqOnIEOyc') # Rock/metal live radio
-        self.url = str ('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
+        #self.url = str ('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
         
         self.instance = vlc.Instance(args)
 
@@ -44,6 +49,7 @@ class Youtuber:
         # Creating an instance of the player.
         self.player = self.instance.media_player_new()
         self.player.set_media(self.media)
+        self.player.audio_set_volume(100)
 
         # Creating a new MediaListPlayer instance and associating the player and playlist with it.
         self.list_player = self.instance.media_list_player_new()
@@ -59,46 +65,53 @@ class Youtuber:
         h = self.widgetCanvas.winfo_id()
         self.player.set_xwindow(h)
         self.player.set_fullscreen(False)
-        #self.player.play()
-        #except Exception as error:
-           # print(error)
-        # Plays video in fullscreen.   
-        #self.set_fullscreen()
+        self.set_window()
+        self.fullscreen_status = False
+        self.audio = alsaaudio.Mixer()
+        self.player.play()
+        self.logger.info('Youtube widget has been initialized.')
         #self.status()
 
     def status(self):
         """ The method is used to follow the Voice assistant cmd set.
         When the user gives a command or commands connected to the video widget,
         the set will contain those commands."""
-        self.player.play()
-        #print(self.player.audio_get_channel())
-        #self.player.audio_get_channel()
-        """for c in self.assistant.cmd:
-            if c == 'fullscreen':
-                print('FULLSCREEN!')
-                self.set_fullscreen()
-            elif c == 'window':
-                print('WINDOW!!!')
-                self.set_window()
-            elif c.find('play') != -1:
-                topic = c.replace('play ', '')
-                print(topic)
-                #searchThread = threading.Thread(target=self.search, args=(topic,))
-                #searchThread.start()
-                self.search(topic)"""
-        #self.assistant.cmd = set()
-        self.widgetCanvas.after(2000, self.status)
+        while True:
+            if self.gesturesAssistant.command == 'VoiceControl':
+                volume = self.player.audio_get_volume()
+                if volume > 0:
+                    self.player.audio_set_volume(0)
+                    self.waveWidget.change_status()
+                    time.sleep(2)
+                    voiceThread = threading.Thread(target=self.voiceAssistant.myCommand)
+                    voiceThread.start()
+                    voiceThread.join()
+                    print(self.voiceAssistant.cmd)
+                    if len(self.voiceAssistant.cmd) > 0:
+                        for c in self.assistant.cmd:
+                            if c == 'fullscreen':
+                                print('FULLSCREEN!')
+                                self.set_fullscreen()
+                            elif c == 'window':
+                                print('WINDOW!!!')
+                                self.set_window()
+                            elif c.find('play') != -1:
+                                topic = c.replace('play ', '')
+                                print(topic)
+                                #searchThread = threading.Thread(target=self.search, args=(topic,))
+                                #searchThread.start()
+                                self.search(topic)
+                    self.waveWidget.change_status()
+                    self.player.audio_set_volume(volume)
+                    self.voiceAssistant.cmd = set()
+            #print('Waiting for command...')
+            time.sleep(0.05)
 
     def search(self, topic):
         """ The method is used to get Youtube link of the desired topic.
         It loads the webpage using a proper request and find the URL of the most relevant video.
         At the end it calls change_url method to actually change the URL of video.
         Arguments: topic as a string."""
-        #command=['youtube-dl', f'ytsearch:"{topic}"', '-e']
-        #result=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True).stdout.split()
-        #print(result)
-        #if len(result) > 0:
-            #self.change_url(result[0])
         query_string = urllib.parse.urlencode({"search_query" : topic})
         html_content = urllib.request.urlopen("http://www.youtube.com/results?" + query_string)
         search_results = re.findall(r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
@@ -125,7 +138,8 @@ class Youtuber:
         """ The method is used to change the size of the video canvas.
         The canvas occupies only small part of the main window."""
         self.widgetCanvas.place(relx=0.97, rely=0.8, anchor='se')
-        self.widgetCanvas.config(width=self.w * 0.4, height=self.h * 0.225)
+        self.widgetCanvas.config(width=self.w * 0.3, height=self.h * 0.3 * 0.5625)
+        self.fullscreen_status = False
 
     def set_fullscreen(self):
         """ The method is used to change the size of the video canvas
@@ -133,22 +147,29 @@ class Youtuber:
         Therefore it occupies fullscreen."""
         self.widgetCanvas.place(relx=0, rely=0, anchor='nw')
         self.widgetCanvas.config(width=self.w, height=self.h)
+        self.fullscreen_status = True
 
 class Assistant:
 
     def __init__(self):
         self.cmd = ['play manowar warrior of the world']
 
+class GesturesAssistant:
+
+    def __init__(self):
+        self.command = 'VoiceControl'
+
 if __name__ == '__main__':
     try:
         window = Tk()
         window.title('Main Window')
         window.configure(bg='black')
-        window.overrideredirect(True)
+        #window.overrideredirect(True)
         w, h = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry("%dx%d+0+0" % (w, h))
         #assistant = Assistant()
-        youtuber = Youtuber(window)
+        gesturesAssistant = GesturesAssistant()
+        youtuber = Youtuber(window, gesturesAssistant)
         window.mainloop()
     except KeyboardInterrupt:
         sys.exit()

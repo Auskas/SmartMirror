@@ -65,7 +65,7 @@ class TeamBot:
                     try:
                         game_time = time.group()
                     except AttributeError:
-                        continue
+                        game_time = '19:00'
                     game_date_and_time = datetime.datetime.strptime(date.group() + game_time, '%d.%m.%Y%H:%M')
                     self.logger.debug('Found a candidate date and time {0} for an upcoming game'.format(game_date_and_time))
                     titles = game.find_all(self.has_attr_title_and_not_class)

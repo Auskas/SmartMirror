@@ -11,6 +11,7 @@ class VoiceAssistant():
     
     def __init__(self):
         self.r = sr.Recognizer()
+        self.r.energy_threshold = 450
         self.logger = logging.getLogger('Gesell.voice_assistant.VoiceAssistant')
         self.logger.info('Voice assistant has been initialized.')
         self.cmd = set()
@@ -29,13 +30,19 @@ class VoiceAssistant():
             # The duration parameter is the maximum number of seconds that it will dynamically adjust the threshold for before returning.
             #This value should be at least 0.5 in order to get a representative sample of the ambient noise.
             self.r.adjust_for_ambient_noise(source, duration=1)
-            audio = self.r.listen(source)
+            try:
+                audio = self.r.listen(source,timeout=6)
+            # Catches the exception when there is nothing said during speech recognition.
+            except sr.WaitTimeoutError:
+                self.logger.debug('Timeout: no speech has been registred.')
+                return None
         try:
             user_speech = self.r.recognize_google(audio, language = "ru-RU").lower()
             self.logger.debug(f'User said: {user_speech}')
-            self.cmd_handler(user_speech)
+            return self.cmd_handler(user_speech)
         except sr.UnknownValueError:
-            pass
+            return None
+
             
     def cmd_handler(self, cmd):
         if cmd.find('полный экран') != -1 or cmd.find('весь экран') != -1 or cmd.find('развернуть') != -1:
@@ -54,7 +61,10 @@ class VoiceAssistant():
             else:
                 cmd = cmd[cmd.find('включи'):]
                 cmd = cmd.replace('включи', '')
-            self.cmd.add(f'play {cmd}')            
+            self.cmd.add(f'play {cmd}')
+        if len(self.cmd) > 0:
+            self.logger.debug(f'The following phrases have been detected: {self.cmd}')
+        return cmd            
 
 if __name__ == '__main__':
     assistant = VoiceAssistant()

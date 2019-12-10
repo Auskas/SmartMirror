@@ -1,12 +1,9 @@
 #! python3
 # gesell.py - main module for my smart mirror project.
 
-import os
 import sys
-print(os.getcwd())
 from tkinter import *
-import datetime
-import time
+import threading
 import logging
 from database import DatabaseBot
 from teambot import TeamBot
@@ -19,11 +16,12 @@ from livescore import LiveScore
 from marquee import Marquee
 from weatherwidget import Weather
 #from face_recognition import FaceRecognizer
-import threading
 from hello import Hello
 from message_widget import MessageWidget
 from youtuber import Youtuber
-#from voice_assistant import VoiceAssistant
+from gestures import Gestures
+from wave_widget import WaveWidget
+from voice_assistant import VoiceAssistant
 
 
 logger = logging.getLogger('Gesell')
@@ -66,7 +64,10 @@ if __name__ == '__main__':
         #faceRecognizerThread = threading.Thread(target=faceRecognizer.realtime_recognizer) # Thread 6. Updates the list of detected users.
         #faceRecognizerThread.start()
         faceRecognizer = None
-        #assistant = VoiceAssistant()
+        gesturesAssistant = Gestures()
+        gesturesThread = threading.Thread(target=gesturesAssistant.mainloop)
+        gesturesThread.start()
+        voiceAssistant = VoiceAssistant()
         #assistantThread = threading.Thread(target=assistant.assistant)
         #assistantThread.start()
         window = Tk()
@@ -82,11 +83,12 @@ if __name__ == '__main__':
         #weather = Weather(window)
         marquee = Marquee(window, parserBot)
         spartak = Spartak(window, nextgameBot, databaseBot, liveScore)
-        #stocks = Stocks(window, parserBot)
+        stocks = Stocks(window, parserBot)
         #messageWidget = MessageWidget(window, clock, databaseBot)
-        youtubeWidget = Youtuber(window)
-        youtuberThread = threading.Thread(target=youtubeWidget.status)
-        youtuberThread.start()
+        waveWidget = WaveWidget(window)
+        youtubeWidget = Youtuber(window, gesturesAssistant, voiceAssistant, waveWidget)
+        youtubeThread = threading.Thread(target=youtubeWidget.status)
+        youtubeThread.start()
         window.mainloop()
     except KeyboardInterrupt:
         sys.exit()

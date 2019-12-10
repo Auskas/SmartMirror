@@ -59,6 +59,9 @@ class ParserBot:
         self.logger.debug('Got the string for current exchange rates.')
 
     def marquee_news(self):
+        """ Downloads the webpage http://newsru.com. 
+        Finds the main news on the page.
+        Also finds other news on the page."""
         new_news = []
         res = self.get_page(self.url_marquee_news)
         if res == False:
@@ -68,10 +71,14 @@ class ParserBot:
         mainNewsText = soup.find('div', class_='sp-main-text')
         new_news.append('. '.join([mainNewsTitle.getText().strip(), mainNewsText.getText().strip()]) + '   ***   ')
         newsTags = soup.find_all('div', class_='left-feed-text')
+        number_of_news = 1
         for tag in newsTags:
             tagTitle = tag.find('div', class_ = 'left-feed-title')
             tagText = tag.find('div', class_= 'left-feed-anons')
             new_news.append(tagTitle.getText().strip() + '   ***   ')
+            number_of_news += 1
+            if number_of_news == 10:
+                break
         if len(new_news) > 0:
             self.news = new_news[:]
     

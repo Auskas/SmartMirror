@@ -9,6 +9,7 @@ import logging
 class Marquee(Canvas):
 
     def __init__(self, frame, newsrubot, fps=125):
+        self.news = 'Владимир Путин выступил на Генеральной ассамблее ООН в костюме Деда Мороза.   ***   Дмитрий Медведев в ходе своего визита на Дальний восток заявил о невозможности разблокировки своего айфона.   ***  Укробандеровские собакофашисты вновь нарушили перемирие на Донбасе, коварно атаковав позиции отважных ополченцев.   ***    В ходе военных учений в Калининградской области российские войска уничтожили двести танков и триста самолетов противника. Условного.   ***   Президент России заявил о двухкратном снижении темпов прироста скорости падения российской экономики.   ***   Согласно опроса ФГЛПРФ ЗД более половины респондентов заявили о беззаговорочной поддержке курса Президента. Кормильца нашего, храни его Бог, благослави все дела его праведные.   ***   Виталий Мутко во время встречи со студентами МГУ признался, что только искренняя любовь к Отчизне заставляет его оставаться на своём посту.   ***   Глава МИД России Сергей Лавров считает овец перед сном.   ***   "Патриотизм и любовь к Родине обязаны быть в сердце каждого россиянина", - заявил Игорь Сечин на встрече с гостями и журналистами на борту своей яхты в Монте-Карло.   ***   Патриарх Московский и Всея Руси Кирилл считает, что российскому обществу следует отказаться от чрезмерной роскоши. В пользу РПЦ.'
         self.logger = logging.getLogger('Gesell.marquee.Marquee')
         self.logger.debug('Initializing an instance of Marquee Widget...')
         self.newsruBot = newsrubot
@@ -30,7 +31,7 @@ class Marquee(Canvas):
         (x0, y0, x1, y1) = self.bbox("text")
         if x1 < 0 or y0 < 0:
             # The text is off the screen. Resetting the x while also getting the news from newsruBot.
-            text = ''.join(self.newsruBot.news) + '\n'
+            text = ''.join(self.news) + '\n'
             self.itemconfig(self.text_id, text=text)
             #print('Gotcha!', x0,y0,x1,y1)
             x0 = self.winfo_width()
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     window = Tk()
     window.title('Main Window')
     window.configure(bg='black')
-    window.overrideredirect(True)
+    #window.overrideredirect(True)
     w, h = window.winfo_screenwidth(), window.winfo_screenheight()
     window.geometry("%dx%d+0+0" % (w, h))
     newsruBot = NewsruBot()
