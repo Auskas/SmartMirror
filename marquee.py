@@ -31,7 +31,7 @@ class Marquee(Canvas):
         (x0, y0, x1, y1) = self.bbox("text")
         if x1 < 0 or y0 < 0:
             # The text is off the screen. Resetting the x while also getting the news from newsruBot.
-            text = ''.join(self.news) + '\n'
+            text = ''.join(self.newsruBot.news) + '\n'
             self.itemconfig(self.text_id, text=text)
             #print('Gotcha!', x0,y0,x1,y1)
             x0 = self.winfo_width()

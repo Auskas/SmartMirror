@@ -10,7 +10,7 @@ import logging
 
 class Spartak:
 
-    def __init__(self, frame, nextgame, database, livescore):
+    def __init__(self, frame, nextgame, database, livescore, voiceAssistant):
         
         self.logger = logging.getLogger('Gesell.spartakwidget.Spartak')
         self.logger.debug('Initializing an instance of Spartak Widget')
@@ -32,6 +32,7 @@ class Spartak:
         self.nextgame = nextgame
         self.database = database
         self.livescore = livescore
+        self.voiceAssistant = voiceAssistant
         #self.face_recognizer = face_recognizer
         self.goalshow = False
         
@@ -40,31 +41,32 @@ class Spartak:
         self.widget()
 
     def widget(self):
-        #if 'Dmitry' in self.face_recognizer.current_users:
         if True:
             self.icon.config(image=self.render)
             if self.database.teamDatabase['current_game'] == 'None':
-                nextgame_string = self.nextgame.nextgame_string
-                self.teamLbl.config(text=nextgame_string, fg='lightblue', font=("SF UI Display Semibold", 16, "bold"))
+                if self.voiceAssistant.cmd['spartak']:
+                    nextgame_string = self.nextgame.nextgame_string
+                    self.teamLbl.config(text=nextgame_string, fg='lightblue', font=("SF UI Display Semibold", 16, "bold"))
+                else:
+                    self.teamLbl.config(text='', fg='lightblue', font=("SF UI Display Semibold", 16, "bold"))
                 self.teamLbl.after(1000, self.widget)
             else:
-                if self.livescore.status != 'Перерыв':
-                    status_string = f'{self.livescore.home_team} - {self.livescore.away_team}   {self.livescore.livescore}   {self.livescore.status}   {self.livescore.elapsed}\''
-                else:
-                    status_string = f'{self.livescore.home_team} - {self.livescore.away_team}   {self.livescore.livescore}   {self.livescore.status}'
-                    self.teamLbl.after(1000, self.widget)
-                self.teamLbl.config(text=status_string, fg='lightblue', font=("SF UI Display Semibold", 16, "bold"))
-                if self.livescore.goal:
-                    if self.goalshow:
-                        self.teamLbl.config(text='ГОЛ!!!', fg='red', font=("SF UI Display Semibold", 32))
-                        self.goalshow = False
+                if self.voiceAssistant.cmd['spartak']:
+                    if self.livescore.status != 'Перерыв':
+                        status_string = f'{self.livescore.home_team} - {self.livescore.away_team}   {self.livescore.livescore}   {self.livescore.status}   {self.livescore.elapsed}\''
                     else:
-                        self.goalshow = True
+                        status_string = f'{self.livescore.home_team} - {self.livescore.away_team}   {self.livescore.livescore}   {self.livescore.status}'
+                        self.teamLbl.after(1000, self.widget)
+                    self.teamLbl.config(text=status_string, fg='lightblue', font=("SF UI Display Semibold", 16, "bold"))
+                    if self.livescore.goal:
+                        if self.goalshow:
+                            self.teamLbl.config(text='ГОЛ!!!', fg='red', font=("SF UI Display Semibold", 32))
+                            self.goalshow = False
+                        else:
+                            self.goalshow = True
+                else:
+                    self.teamLbl.config(text='', fg='red', font=("SF UI Display Semibold", 32))
                 self.teamLbl.after(1000, self.widget)
-        else:
-            self.teamLbl.config(text='')
-            self.icon.config(image='')
-            self.teamLbl.after(1000, self.widget)
-        
+       
 
         

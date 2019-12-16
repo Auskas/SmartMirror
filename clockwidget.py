@@ -8,9 +8,10 @@ import logging
 
 class Clock:
 
-    def __init__(self, frame, database):
+    def __init__(self, frame, database, voiceAssistant):
         self.logger = logging.getLogger('Gesell.clockwidget.Clock')
         self.logger.debug('Initializing an instance of Clock Widget...')
+        self.voiceAssistant = voiceAssistant
         self.timeLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display", 48))
         self.timeLbl.place(relx=0.03, rely=0.01)
         #self.timeLbl.grid(row=0, column=0, sticky='w', padx=10)
@@ -41,16 +42,23 @@ class Clock:
                 self.database.usersDatabase[user]['day'] = False
                 self.database.usersDatabase[user]['evening'] = False
                 self.database.usersDatabase[user]['night'] = False
-        self.timeLbl.config(text=current_time_str)
+        # The following condition checks if the user decides to conceal clock widget.
+        if self.voiceAssistant.cmd['clock']:
+            self.timeLbl.config(text=current_time_str)
+            self.dateLbl.config(text=self.current_date_str)
+        else:
+            self.timeLbl.config(text='')
+            self.dateLbl.config(text='')
         self.timeLbl.after(1000, self.clock_widget)
 
     def calendar_widget(self, current_date_and_time):
         days = current_date_and_time.day
+        # The following condition checks if it is necessary to put a zero in front of the date number.
         if days < 10:
             days = f'0{current_date_and_time.day}'
         else:
             days = str(days)
         weekday = self.weekdays[current_date_and_time.weekday()]
         month = self.months[current_date_and_time.month]
-        current_date_str =  f'{weekday}, {days} {month}'
-        self.dateLbl.config(text=current_date_str)
+        self.current_date_str =  f'{weekday}, {days} {month}'
+        self.dateLbl.config(text=self.current_date_str)

@@ -18,20 +18,16 @@ class WaveWidget:
         self.file = wave.open('siri.wav', 'rb')
         self.wavegif()
 
-    def wavegif(self, flag=False):
+    def wavegif(self):
         def update(ind):
             frame = self.frames[ind]
             ind += 1
             if ind == len(self.frames) - 1:
-                self.waveLbl.after(10, self.wavegif, flag)
+                self.waveLbl.after(10, self.wavegif)
             else:
                 self.waveLbl.configure(image=frame)
                 self.waveLbl.after(100, update, ind)
         if self.status:
-            if flag == False:
-                flag = True
-                playwavThread = threading.Thread(target=self.play)
-                playwavThread.start()
             ind = 1
             update(ind)
         else:
@@ -45,7 +41,7 @@ class WaveWidget:
             self.status = False
 
     def play(self):
-        self.file = wave.open('siri.wav', 'rb')
+        self.file = wave.open('siri_begin.wav', 'rb')
         self.device.setchannels(self.file.getnchannels())
         self.device.setrate(self.file.getframerate())
         # 8bit is unsigned in wav files

@@ -62,7 +62,7 @@ class Gestures:
         First checks if there is a gesture in the top left corner,
         second, checks if there is a gesture in the top right corner."""
         while self.camera.isOpened():
-            self.detection(0, int(self.cap_region_x_begin * self.shape[1]))
+            #self.detection(0, int(self.cap_region_x_begin * self.shape[1]))
             self.detection(int((1 - self.cap_region_x_begin) * self.shape[1]), self.shape[1])
 
     def detection(self, begin, end):
@@ -85,7 +85,9 @@ class Gestures:
         # convert the image into binary image
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (self.blurValue, self.blurValue), 0)
+        #cv2.imshow('blur', blur)
         ret, thresh = cv2.threshold(blur, self.threshold, 255, cv2.THRESH_BINARY)
+        #cv2.imshow('ori', thresh)
         # get the coutours
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         length = len(contours)

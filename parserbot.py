@@ -9,11 +9,12 @@ import bs4
 class ParserBot:
     
     def __init__(self):
-        self.logger = logging.getLogger('Gesell.yandexbot.YandexBot')
+        self.logger = logging.getLogger('Gesell.yandexbot.ParserBot')
         self.url = 'https://yandex.ru/'
         self.url_calendar = 'https://www.sports.ru/spartak/calendar/'
         self.url_marquee_news = 'https://www.newsru.com'
-        self.logger.debug('An instance of YandexBot has been created.')
+        self.url_astro = 'https://www.go-astronomy.com/solar-system/event-calendar.htm'
+        self.logger.debug('An instance of ParserBot has been created.')
         self.news = []
         self.rates_string = ''
 
@@ -29,6 +30,17 @@ class ParserBot:
             self.logger.error('Cannot get the page {0}'.format(link))
             self.logger.error('The following error occured: {0}'.format(error))
             return False
+    
+    def astro(self):
+        """ Uses www.go-astronomy.com to obtain the data regarding today's astronomical events."""
+        res = self.get_page(self.url_astro)
+        if res == False:
+            return None
+        soup = bs4.BeautifulSoup(res, features='lxml')
+        candidates = soup.find_all('p')
+        for candidate in candidates:
+            print(candidate.getText())
+            print('#################')
 
     def rates(self):
         """ Uses 'yandex.ru' to obtain stocks data."""
@@ -94,6 +106,6 @@ class ParserBot:
 
 if __name__ == '__main__':
     a = ParserBot()
-    a.marquee_news()
+    a.astro()
 
 __version__ = '0.01' # 20.11.2019    
