@@ -1,7 +1,8 @@
-#! python3
+#!/usr/bin/python3
 # wave_widget.py
 
 from tkinter import *
+import os
 import wave
 import threading
 import alsaaudio
@@ -15,7 +16,7 @@ class WaveWidget:
         self.waveLbl = Label(self.window, bg='black', bd=0)
         self.waveLbl.place(relx=0.5, rely=0.5, anchor=CENTER)
         self.device = alsaaudio.PCM(device='default')
-        self.file = wave.open('siri.wav', 'rb')
+        self.siri_chime = wave.open(f'Sounds{os.sep}siri_begin.wav', 'rb')
         self.wavegif()
 
     def wavegif(self):
@@ -41,28 +42,29 @@ class WaveWidget:
             self.status = False
 
     def play(self):
-        self.file = wave.open('siri_begin.wav', 'rb')
-        self.device.setchannels(self.file.getnchannels())
-        self.device.setrate(self.file.getframerate())
-        # 8bit is unsigned in wav files
-        if self.file.getsampwidth() == 1:
+        """ Plays Siri chime from a wav file using self.siri_chime object."""
+
+        self.device.setchannels(self.siri_chime.getnchannels())
+        self.device.setrate(self.siri_chime.getframerate())
+        # 8bit is unsigned in wav files.
+        if self.siri_chime.getsampwidth() == 1:
             self.device.setformat(alsaaudio.PCM_FORMAT_U8)
-        # Otherwise we assume signed data, little endian
-        elif self.file.getsampwidth() == 2:
+        # Otherwise we assume signed data, little endian.
+        elif self.siri_chime.getsampwidth() == 2:
             self.device.setformat(alsaaudio.PCM_FORMAT_S16_LE)
-        elif self.file.getsampwidth() == 3:
+        elif self.siri_chime.getsampwidth() == 3:
             self.device.setformat(alsaaudio.PCM_FORMAT_S24_3LE)
-        elif self.file.getsampwidth() == 4:
+        elif self.siri_chime.getsampwidth() == 4:
             self.device.setformat(alsaaudio.PCM_FORMAT_S32_LE)
         else:
             raise ValueError('Unsupported format')   
-        periodsize = self.file.getframerate() // 8
+        periodsize = self.siri_chime.getframerate() // 8
         self.device.setperiodsize(periodsize)
-        data = self.file.readframes(periodsize)
+        data = self.siri_chime.readframes(periodsize)
         while data:
             # Read data from stdin
             self.device.write(data)
-            data = self.file.readframes(periodsize)  
+            data = self.siri_chime.readframes(periodsize)  
    
 if __name__ == '__main__':
     window = Tk()
@@ -72,4 +74,5 @@ if __name__ == '__main__':
     w, h = window.winfo_screenwidth(), window.winfo_screenheight()
     window.geometry("%dx%d+0+0" % (w, h))
     a = WaveWidget(window, True)
+    a.play();
     window.mainloop()

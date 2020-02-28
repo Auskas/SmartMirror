@@ -21,7 +21,11 @@ class ParserBot:
     def get_page(self, link):
         """ Loads a web page using 'requests' module. Returns the result as text if the status is OK.
         Otherwise, returns False."""
-        res = requests.get(link)
+        try:
+            res = requests.get(link)
+        except Exception as error:
+            self.logger.error(f'Cannot load the page, the following error occured: {error}')
+            return False
         try:
             res.raise_for_status()
             self.logger.debug('Page {0} has been successfully loaded.'.format(link))
@@ -44,6 +48,7 @@ class ParserBot:
 
     def rates(self):
         """ Uses 'yandex.ru' to obtain stocks data."""
+        print('Trying to get stocks rates...')
         values = []
         changes = []
         res = self.get_page(self.url)
@@ -96,16 +101,22 @@ class ParserBot:
     
     def bot(self):
         while True:
-            self.rates()
-            time.sleep(3600)
+            rates = self.rates()
+            if rates == None:
+                time.sleep(60)
+            else:
+                time.sleep(3600)
 
     def newsbot(self):
         while True:
-            self.marquee_news()
-            time.sleep(3600)
+            marquee_news = self.marquee_news()
+            if marquee_news == None:
+                time.sleep(60)
+            else:
+                time.sleep(3600)
 
 if __name__ == '__main__':
     a = ParserBot()
-    a.astro()
+    a.marquee_news()
 
 __version__ = '0.01' # 20.11.2019    

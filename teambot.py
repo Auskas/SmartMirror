@@ -30,7 +30,11 @@ class TeamBot:
     def get_page(self, link):
         """ Loads a web page using 'requests' module. Returns the result as text if the status is OK.
         Otherwise, returns False."""
-        res = requests.get(link)
+        try:
+            res = requests.get(link)
+        except Exception as error:
+            self.logger.error(f'Cannot load the page, the following error occured: {error}')
+            return False
         try:
             res.raise_for_status()
             self.logger.debug('Page {0} has been successfully loaded.'.format(link))

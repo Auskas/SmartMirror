@@ -1,7 +1,7 @@
 #! python3
 # livescore.py - score notifier for my Smart Mirror project.
 
-import logging, datetime, time
+import logging, datetime, time, requests
 
 class LiveScore:
 
@@ -146,7 +146,11 @@ class LiveScore:
 
     def get_api(self, link):
         # Checks whether the link can be loaded.
-        res = requests.get(link, headers=self.headers)
+        try:
+            res = requests.get(link, headers=self.headers)
+        except Exception as error:
+            self.logger.error(f'Cannot get the API, the following error occured: {error}')
+            return False
         try:
             res.raise_for_status()
             self.logger.debug('Got the response from API Football')
