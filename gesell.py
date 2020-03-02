@@ -19,7 +19,8 @@ from weatherwidget import Weather
 from hello import Hello
 from message_widget import MessageWidget
 from youtuber import Youtuber
-from gestures import Gestures
+#from gestures import Gestures
+from gestures_recognizer import GesturesRecognizer
 from wave_widget import WaveWidget
 from voice_assistant import VoiceAssistant
 
@@ -70,8 +71,12 @@ if __name__ == '__main__':
         #faceRecognizerThread.daemon = True
         #faceRecognizerThread.start()
         faceRecognizer = None
-        gesturesAssistant = Gestures()
-        gesturesThread = threading.Thread(target=gesturesAssistant.mainloop) # Thread 7. Recognizes gestures for controlling the mirror.
+        #gesturesAssistant = Gestures()
+        #gesturesThread = threading.Thread(target=gesturesAssistant.mainloop) # Thread 7. Recognizes gestures for controlling the mirror.
+        #gesturesThread.daemon = True
+        #gesturesThread.start()
+        gesturesAssistant = GesturesRecognizer()
+        gesturesThread = threading.Thread(target=gesturesAssistant.tracker) # Thread 7. Recognizes gestures for controlling the mirror.
         gesturesThread.daemon = True
         gesturesThread.start()
         window = Tk()

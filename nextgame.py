@@ -1,4 +1,4 @@
-#! python3
+#!/usr/bin/python3
 # nextgame.py - the module updates the upcoming game data.
 
 import logging
@@ -27,7 +27,12 @@ class NextGame:
             if gamedata['coeffs'][0] != 'None':
                 coeffs_string = '  '.join([str(gamedata['coeffs'][0]), str(gamedata['coeffs'][1]), str(gamedata['coeffs'][2])])
             else:
-                coeffs_string = ''
+                self.logger.info('Even though the game data is found, the coefficients have not been obtained yet. Trying to fix...')
+                self.teamBot.coefficients(team1, team2, competition)
+                if gamedata['coeffs'][0] != 'None':
+                    coeffs_string = '  '.join([str(gamedata['coeffs'][0]), str(gamedata['coeffs'][1]), str(gamedata['coeffs'][2])])
+                else:
+                    coeffs_string = ''
             self.nextgame_string = f'{competition}   {team1} - {team2}   {date}   Кэфы: {coeffs_string}'
         while True:
             current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)

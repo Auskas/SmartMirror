@@ -12,7 +12,8 @@ class VoiceAssistant():
         self.r = sr.Recognizer()
         self.logger.info('Voice assistant has been initialized.')
         self.cmd = {'youtube' : set(), 'weather': True, 'stocks': True,
-                    'marquee': True, 'spartak': True, 'clock': True}
+                    'marquee': True, 'spartak': True, 'clock': True,
+                    'gesturesMode': False}
         self.hide_commands = ('убрать', 'убери', 'скрыть', 'скрой', 'закрыть', 'закрой',
                               'выключи', 'выключить', 'hide', 'conceal', ' off')
         self.show_commands = ('показать', 'покажи', 'вывести', 'выведи', 'открой', 'открыть',
@@ -46,11 +47,16 @@ class VoiceAssistant():
             return None
             
     def cmd_handler(self, cmd):
+        """ Gets a string of recognized speech as cmd. 
+            Checks if there are any sort of commands in it.
+            Modifies self.cmd according to the detected commands."""
+
         if (cmd.find('все виджеты') != -1 or cmd.find('all the widgets') != -1
             or cmd.find('всю графику') != -1 or cmd.find('всё') != -1) and self.second_part_command(cmd) == False:
             (self.cmd['clock'], self.cmd['spartak'], self.cmd['marquee'],
             self.cmd['stocks'], self.cmd['weather']) = False, False, False, False, False
             self.cmd['youtube'].add('playback stop')
+
         elif (cmd.find('все виджеты') != -1 or cmd.find('all the widgets') != -1
               or cmd.find('всю графику') != -1 or cmd.find('всё') != -1) and self.second_part_command(cmd):
             (self.cmd['clock'], self.cmd['spartak'], self.cmd['marquee'],
@@ -59,26 +65,31 @@ class VoiceAssistant():
             
         elif cmd.find('часы') != -1 and self.second_part_command(cmd) == False:
             self.cmd['clock'] = False
+
         elif cmd.find('часы') != -1 and self.second_part_command(cmd):
             self.cmd['clock'] = True
 
         elif cmd.find('погод') != -1 and self.second_part_command(cmd) == False:
             self.cmd['weather'] = False
+
         elif cmd.find('погод') != -1 and self.second_part_command(cmd):
             self.cmd['weather'] = True
             
         elif cmd.find('курс') != -1 and self.second_part_command(cmd) == False:
             self.cmd['stocks'] = False
+
         elif cmd.find('курс') != -1 and self.second_part_command(cmd):
             self.cmd['stocks'] = True
             
         elif cmd.find('спартак') != -1 and self.second_part_command(cmd) == False:
             self.cmd['spartak'] = False
+
         elif cmd.find('спартак') != -1 and self.second_part_command(cmd):
             self.cmd['spartak'] = True
             
         elif (cmd.find('строк') != -1 or cmd.find('новост') != -1) and self.second_part_command(cmd) == False:
             self.cmd['marquee'] = False
+
         elif (cmd.find('строка') != -1 or cmd.find('новост') != -1) and self.second_part_command(cmd):
             self.cmd['marquee'] = True
             
@@ -108,6 +119,10 @@ class VoiceAssistant():
                     cmd = cmd[cmd.find(cmd):]
                     cmd = cmd.replace(c, '')
             self.cmd['youtube'].add(f'video search {cmd}')
+
+        elif cmd.find('gestures') != -1 and cmd.find('recognition') != -1 and cmd.find('mode') != -1:
+            self.cmd['gesturesMode'] = True
+
         if len(self.cmd) > 0:
             self.logger.debug(f'The following phrases have been detected: {self.cmd}')
         return cmd

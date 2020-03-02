@@ -50,10 +50,10 @@ class Youtuber:
         #self.url = str('https://www.youtube.com/watch?v=-fLF_ejuOjs&pbjreload=10') # Football Club 2
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
         #self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
-        #self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
+        self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
         #self.url = str('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
         #self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
-        self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
+        #self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
         
         self.instance = vlc.Instance(args)
         
@@ -154,6 +154,24 @@ class Youtuber:
                 self.voiceAssistant.cmd['youtube'] = set()
                 # Removes the gesture.
                 self.gesturesAssistant.command = 'None'
+
+            # The condition below is used to change the system audio volume based on the gestureAssistant diff value.
+            # gestureAssistant diff value changes when the detected pointing finger moves upwards or downwards.
+            elif self.gesturesAssistant.diff != 0:
+                audio_diff = self.gesturesAssistant.diff
+                audio_volume = self.audio.getvolume()[0]
+                # If the finger moves upwards and there is enough space for turning the volume up.
+                if audio_diff < 0 and abs(audio_diff) + audio_volume < 100:
+                    self.audio.setvolume(audio_volume - audio_diff)
+                # If the finger moves upwards and there is no space for turning the volume up. The volume is set to the maximum value.
+                elif audio_diff < 0 and abs(audio_diff) + audio_volume > 100:
+                    self.audio.setvolume(100)
+                # If the finger moves downwards and there is enough space for turning the volume down. 
+                elif audio_diff > 0 and audio_diff < audio_volume:
+                    self.audio.setvolume(audio_volume - audio_diff)
+                # If the finger moves downwards and there is no space for turning the volume down. Literally mutes the playback.
+                elif audio_diff > 0 and audio_diff > audio_volume:
+                    self.audio.setvolume(0)
             time.sleep(0.05)
             
     def video_fullscreen_status(self):
@@ -283,7 +301,7 @@ if __name__ == '__main__':
         gesturesAssistant = GesturesAssistant()
         waveWidget = WaveWidget()
         youtuber = Youtuber(window, gesturesAssistant, voiceAssistant, waveWidget)
-        youtuber.set_fullscreen()
+        #youtuber.set_fullscreen()
         youtuberThread = threading.Thread(target=youtuber.status)
         youtuberThread.daemon = True
         youtuberThread.start()

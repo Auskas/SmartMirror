@@ -15,6 +15,7 @@ class TeamBot:
         self.url_calendar = 'https://www.sports.ru/spartak/calendar/'
         self.url_news = 'https://www.sports.ru/spartak/'
         self.url_coeffs_rpl = 'https://www.marathonbet.ru/su/popular/Football/Russia/Premier+League'
+        self.url_coeffs_cup = 'https://www.marathonbet.ru/su/popular/Football/Russia/Cup'
         self.url_coeffs_cl = 'https://www.marathonbet.ru/su/popular/Football/Clubs.+International/UEFA+Champions+League'
         self.url_coeffs_el = 'https://www.marathonbet.ru/su/popular/Football/Clubs.+International/UEFA+Europa+League'
         self.url_coeffs_popular = 'https://www.marathonbet.ru/su/popular/Football'
@@ -111,6 +112,8 @@ class TeamBot:
         # Marathonbet's web site is used for getting the coeffs.
         if competition == 'РПЛ':
             url = self.url_coeffs_rpl
+        elif competition == 'Кубок России':
+            url = self.url_coeffs_cup
         elif competition == 'ЛЧ':
             url = self.url_coeffs_cl
         elif competition == 'ЛЕ':
