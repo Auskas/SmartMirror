@@ -6,7 +6,6 @@ import numpy as np
 import cv2
 import os, copy
 import logging
-import alsaaudio
 
 class GesturesRecognizer:
 
@@ -19,6 +18,9 @@ class GesturesRecognizer:
             ch.setFormatter(formatter)
             self.logger.setLevel(logging.DEBUG)
             self.logger.addHandler(ch)
+            #import alsaaudio
+            #m = alsaaudio.Mixer()
+            #audio_volume = int(m.getvolume()[0])
 
         if os.path.isfile('hand_histogram.npy'):
             try:
@@ -37,14 +39,16 @@ class GesturesRecognizer:
             self.logger.error(f'Cannot load the CNN: {error}')
 
         self.LABELS = ['Five', 'Four', 'Inverted L', 'Peace', 'Pointing finger', 'None', 'Sign of the horns', 'Thumb up']
+        self.LABEL = ''
         self.cam = cv2.VideoCapture(0)
-        self.cam.set(10, 122.0) # Sets the brightness of the camera.
-        self.cam.set(11, 122.0) # Sets the contrast of the camera.
-        self.cam.set(15, 122.0) # Sets the gain of the camera.
+        self.logger.debug(f'Brightness {self.cam.get(10)}')
+        self.logger.debug(f'Contrast {self.cam.get(11)}')
+        self.cam.set(10, -5.0) # Sets the brightness of the camera.
+        self.cam.set(11, 150) # Sets the contrast of the camera.
         self.tips = []
         self.exposure_time = 0 # Increases by one every frame the tip of a finger is detected.
         #ret, image = cam.read()
-        self.ROI_SIZE = 300
+        self.ROI_SIZE = 250
         self.IMG_SIZE = 32
         # Frame per second rate - the number of frames analyzed per second.
         self.FPS = 20
@@ -52,11 +56,10 @@ class GesturesRecognizer:
         ret, self.frame = self.cam.read()
         self.begin_X, self.begin_Y = int(self.frame.shape[1] - self.ROI_SIZE), 0
         self.end_X, self.end_Y = self.frame.shape[1], self.ROI_SIZE
-        self.finger_tip = None
+        self.finger_tip = None # the coordinates of the pointing finger tip.
         self.diff = 0
         self.command = 'None'
-        #self.m = alsaaudio.Mixer()
-        #self.audio_volume = int(self.m.getvolume()[0])
+        self.max_contour_found = None
 
     def draw_rectangle(self, frame):
         # Get the number of rows and columns in the frame.
@@ -225,6 +228,7 @@ class GesturesRecognizer:
             roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             ret, roi = cv2.threshold(roi, 0, 255, cv2.THRESH_BINARY)
             preprocessed = roi.copy()
+
             # Calls the function to find the contour, hull, centre of a hand and the tip of the pointing finger.
             self.draw_final(roi)
 
@@ -235,6 +239,11 @@ class GesturesRecognizer:
 
             prediction = self.model.predict(roi)
             i = prediction.argmax(axis=-1)[0]
+
+            if i != 5:
+                self.LABEL = self.LABELS[i]
+            else:
+                self.LABEL = ''
 
             if i == 0:
                 self.command = 'VoiceControl'
@@ -260,7 +269,8 @@ class GesturesRecognizer:
                 cv2.drawContours(color_roi, [self.hull_found], -1, (255, 0, 0), 3)
 
             # If the CNN detects a pointing finger or a thumb up the last 15 checkpoint of the tip are displayed and saved.
-            if i == 4 or i == 7:
+            if i == 4:
+
                 self.exposure_time += 1
                 if self.defects_found is not None and len(self.defects_found) > 0:
                     for i in range(self.defects_found.shape[0]):
@@ -269,52 +279,46 @@ class GesturesRecognizer:
                         end = tuple(self.max_contour_found[e][0])
                         far = tuple(self.max_contour_found[f][0])
                         #cv2.circle(color_roi, start, 5, [255, 0, 255], -1)
+
                     # In order to avoid wrong tracking of the tip while the user is moving their hand to the ROI,
                     # the script waits for (exposure_time * FPS miliseconds) before starts tracking the tip.
-                    if self.exposure_time > 30:
+                    if self.exposure_time > 20:
                         cv2.putText(frame, self.TIP_TEXT, (10,60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255) , 2)
                         #cv2.putText(frame, f'Audio volume: {self.audio_volume}%', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255) , 2)
+                        
                         # Very first coordinate of tracking.
                         if len(self.tips) == 0 and self.finger_tip != None:
                             self.tips.append(self.finger_tip)
                             continue
+                        
                         # If it is at least second detected coordinate and it is not far away from the previous one.
                         elif (
                             self.finger_tip != None
                             and len(self.tips) > 0
-                            and abs(self.finger_tip[1] - self.tips[len(self.tips) - 1][1]) < 15
-                            and abs(self.finger_tip[0] - self.tips[len(self.tips) - 1][0]) < 15
+                            and abs(self.finger_tip[1] - self.tips[len(self.tips) - 1][1]) < 20
+                            and abs(self.finger_tip[0] - self.tips[len(self.tips) - 1][0]) < 25
                             ):
                             self.tips.append(self.finger_tip)
+
                             if len(self.tips) > 15:
                                 self.tips.pop(0)
+
                             for tip in self.tips:
                                 cv2.circle(color_roi, tip, 5, [0, 0, 255], -1)
                                 coordinates = (frame.shape[1] - self.ROI_SIZE + tip[0], tip[1])
                                 cv2.circle(frame, coordinates, 5, [0, 0, 255], -1)
 
-                            # Changes audio volume when the finger moves upwards and downwards.
-                            # tips coordinates are in the following format (x,y)
-                            self.diff = self.tips[len(self.tips) - 1][1] - self.tips[len(self.tips) - 2][1]
-                            if self.diff != 0:
-                                self.command = 'VolumeControl'
-                            else:
-                                self.command = 'None'
-                            # If the finger moves upwards and the current volume plus the coordinates' difference are less than 100.
-                            #if diff < 0 and abs(diff) + self.audio_volume < 100:
-                                #self.m.setvolume(self.audio_volume + abs(diff))
-                            # If the finger moves upwards and the difference plus the current volume are too high, set the maximum value.
-                            #elif diff < 0 and abs(diff) + self.audio_volume > 100:
-                                #self.m.setvolume(100)
-                            #elif diff > 0 and diff < self.audio_volume:
-                                #self.m.setvolume(self.audio_volume - diff)
-                            #elif diff > 0 and diff > self.audio_volume:
-                                #self.m.setvolume(0)
+                            # Changes audio volume when the finger moves either to the left or to the right.
+                            # The tip coordinates are in the following format (x,y)
+                            self.diff = self.tips[len(self.tips) - 1][0] - self.tips[len(self.tips) - 2][0]
+
                         # Something went wrong: either the finger is moved too fast or an artefact is detected as the finger.
                         else:
+                            self.diff = 0
                             self.tips = []
             else:
                 self.exposure_time = 0
+                self.diff = 0
                 self.tips = []
 
             k = cv2.waitKey(int(1000 / self.FPS)) & 0xff
@@ -329,8 +333,6 @@ class GesturesRecognizer:
 
 if __name__ == '__main__':
     import alsaaudio
-    #m = alsaaudio.Mixer()
-    #audio_volume = int(m.getvolume()[0])
     gestures_recognizer = GesturesRecognizer()
     gestures_recognizer.tracker()
 

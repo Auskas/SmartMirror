@@ -80,10 +80,11 @@ class Clock:
             Assigns to dateLbl the current date in the format {weekday}, DD {month}."""
         days = current_date_and_time.day
         # The following condition checks if it is necessary to put a zero in front of the date digit.
-        if days < 10:
-            days = f'0{current_date_and_time.day}'
-        else:
-            days = str(days)
+        #if days < 10:
+            #days = f'0{current_date_and_time.day}'
+        #else:
+            #days = str(days)
+        days = str(days)
         # Translates the weekday as a digit into the name of the weekday.
         weekday = self.weekdays[current_date_and_time.weekday()]
         # Translates the month number into the name of the month.

@@ -101,16 +101,16 @@ class ParserBot:
     
     def bot(self):
         while True:
-            rates = self.rates()
-            if rates == None:
+            self.rates()
+            if self.rates_string == '':
                 time.sleep(60)
             else:
                 time.sleep(3600)
 
     def newsbot(self):
         while True:
-            marquee_news = self.marquee_news()
-            if marquee_news == None:
+            self.marquee_news()
+            if len(self.news) == 0:
                 time.sleep(60)
             else:
                 time.sleep(3600)

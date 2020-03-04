@@ -18,7 +18,7 @@ from random import choice
 
 class Youtuber:
 
-    def __init__(self, window, gesturesAssistant, voiceAssistant, waveWidget):
+    def __init__(self, window, gesturesAssistant, voiceAssistant, waveWidget, volumeWidget):
         self.logger = logging.getLogger('Gesell.youtuber.Youtuber')
 
         if __name__ == '__main__': # Creates a logger if the module is called directly.
@@ -31,15 +31,16 @@ class Youtuber:
         self.window = window
         self.gesturesAssistant = gesturesAssistant
         self.waveWidget = waveWidget
+        self.volumeWidget = volumeWidget
         # self.w and self.h are the dimension of the main window. 
-        # They are used to switch the video into the ullscreen mode.
+        # They are used to switch the video into the fullscreen mode.
         self.w, self.h = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
         self.voiceAssistant = voiceAssistant
         _isMacOS   = sys.platform.startswith('darwin')
         _isWindows = sys.platform.startswith('win')
         _isLinux = sys.platform.startswith('linux')
         args = ['--video-wallpaper', '--play-and-exit', '--verbose=0', '--aout=alsa',
-                '--vout=X11', '--network-caching=1000'] 
+                '--vout=X11', '--network-caching=1000', '--no-ts-trust-pcr', '--ts-seek-percent'] 
                #'--no-ts-trust-pcr', '--ts-seek-percent',  '--file-logging', '--logfile=vlc-log.txt', '--aout=alsa'
         if _isLinux:
             args.append('--no-xlib')
@@ -50,9 +51,9 @@ class Youtuber:
         #self.url = str('https://www.youtube.com/watch?v=-fLF_ejuOjs&pbjreload=10') # Football Club 2
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
         #self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
-        self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
+        #self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
         #self.url = str('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
-        #self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
+        self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
         #self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
         
         self.instance = vlc.Instance(args)
@@ -85,10 +86,13 @@ class Youtuber:
         self.player.set_fullscreen(False)
         #self.set_window()
         self.fullscreen_status = False
+
         self.audio = alsaaudio.Mixer()
+        self.audio_volume = self.audio.getvolume()[0] # system audio volume
+
         self.list_player.play()
         self.video_status = 'running'
-        #self.player.play()
+        #self.set_fullscreen()
         self.logger.info('Youtube widget has been initialized.')
 
     def status(self):
@@ -147,7 +151,6 @@ class Youtuber:
                             self.search(topic)
 
                 self.waveWidget.change_status()
-
                 # Restores the playback volume to the saved value.
                 self.player.audio_set_volume(volume)
                 # Removes all the voice commands related to the widget by making a new empty set.
@@ -157,21 +160,34 @@ class Youtuber:
 
             # The condition below is used to change the system audio volume based on the gestureAssistant diff value.
             # gestureAssistant diff value changes when the detected pointing finger moves upwards or downwards.
-            elif self.gesturesAssistant.diff != 0:
+            if self.gesturesAssistant.diff != 0:
                 audio_diff = self.gesturesAssistant.diff
-                audio_volume = self.audio.getvolume()[0]
-                # If the finger moves upwards and there is enough space for turning the volume up.
-                if audio_diff < 0 and abs(audio_diff) + audio_volume < 100:
-                    self.audio.setvolume(audio_volume - audio_diff)
-                # If the finger moves upwards and there is no space for turning the volume up. The volume is set to the maximum value.
-                elif audio_diff < 0 and abs(audio_diff) + audio_volume > 100:
-                    self.audio.setvolume(100)
-                # If the finger moves downwards and there is enough space for turning the volume down. 
-                elif audio_diff > 0 and audio_diff < audio_volume:
-                    self.audio.setvolume(audio_volume - audio_diff)
-                # If the finger moves downwards and there is no space for turning the volume down. Literally mutes the playback.
-                elif audio_diff > 0 and audio_diff > audio_volume:
-                    self.audio.setvolume(0)
+                self.audio_volume = self.audio.getvolume()[0]
+                # If the finger moves to the right and there is enough space for turning the volume up.
+                if audio_diff > 0 and audio_diff + self.audio_volume < 100:
+                    self.audio_volume += audio_diff
+                    self.audio.setvolume(self.audio_volume)
+                # If the finger moves to the right and there is no space for turning the volume up. The volume is set to the maximum value.
+                elif audio_diff > 0 and audio_diff + self.audio_volume > 100:
+                    self.audio_volume = 100
+                    self.audio.setvolume(self.audio_volume)
+                # If the finger moves to the left and there is enough space for turning the volume down. 
+                elif audio_diff < 0 and abs(audio_diff) < self.audio_volume:
+                    self.audio_volume += audio_diff
+                    self.audio.setvolume(self.audio_volume)
+                # If the finger moves to the left and there is no space for turning the volume down. Literally mutes the playback.
+                elif audio_diff < 0 and audio_diff > self.audio_volume:
+                    self.audio_volume = 0
+                    self.audio.setvolume(self.audio_volume)
+
+                self.volumeWidget.ball_position(self.audio_volume)
+
+            # Shows the volume widget if the pointing finger is detected for over 20 consecutive frames.
+            if self.volumeWidget.is_concealed and self.gesturesAssistant.exposure_time >= 20:
+                self.volumeWidget.show()
+            # Hides the volume widget if the pointing finger is not detected.
+            elif self.volumeWidget.is_concealed == False and self.gesturesAssistant.exposure_time == 0:
+                self.volumeWidget.hide()
             time.sleep(0.05)
             
     def video_fullscreen_status(self):

@@ -2,6 +2,7 @@
 # spartakwidget.py - a widget of the best FC in the world for my Smart Mirror project.
 
 from tkinter import *
+import os
 import datetime
 import time
 import logging
@@ -20,7 +21,7 @@ class Spartak:
         self.widgetFrame.place(relx=0.03, rely=0.9)
 
         # FC Spartak Moscow icon.
-        self.render = ImageTk.PhotoImage(Image.open('spartak_icon.jpg'))
+        self.render = ImageTk.PhotoImage(Image.open(f'icons{os.sep}spartak_icon.jpg'))
         self.icon = Label(self.widgetFrame, image=self.render, bg='black')
         self.icon.image = self.render
         self.icon.pack(side=LEFT)
