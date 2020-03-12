@@ -76,28 +76,29 @@ if __name__ == '__main__':
         newsruThread.start()
 
         gesturesAssistant = GesturesRecognizer()
-        gesturesThread = threading.Thread(target=gesturesAssistant.tracker) # Thread 7. Recognizes gestures for controlling the mirror.
-        gesturesThread.daemon = True
-        gesturesThread.start()
+        if gesturesAssistant.camera_found:
+            gesturesThread = threading.Thread(target=gesturesAssistant.tracker) # Thread 7. Recognizes gestures for controlling the mirror.
+            gesturesThread.daemon = True
+            gesturesThread.start()
 
         window = Tk()
         window.title('Main Window')
         window.configure(bg='black')
         # Disables closing the window by standard means, such as ALT+F4 etc.
-        # window.overrideredirect(True)
+        window.overrideredirect(True)
         w, h = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry("%dx%d+0+0" % (w, h))
         logger.debug('Main window has been created')
 
-        clock = Clock(window, databaseBot, voiceAssistant)
+        clock = Clock(window, databaseBot, voiceAssistant, gesturesAssistant)
 
-        weather = Weather(window, voiceAssistant)
+        weather = Weather(window, voiceAssistant, gesturesAssistant)
 
-        marquee = Marquee(window, parserBot, voiceAssistant)
+        marquee = Marquee(window, parserBot, voiceAssistant, gesturesAssistant)
 
-        spartak = Spartak(window, nextgameBot, databaseBot, liveScore, voiceAssistant)
+        spartak = Spartak(window, nextgameBot, databaseBot, liveScore, voiceAssistant, gesturesAssistant)
 
-        stocks = Stocks(window, parserBot, voiceAssistant)
+        stocks = Stocks(window, parserBot, voiceAssistant, gesturesAssistant)
 
         messageWidget = MessageWidget(window, voiceAssistant, gesturesAssistant)
 

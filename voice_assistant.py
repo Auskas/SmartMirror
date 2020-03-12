@@ -9,6 +9,12 @@ class VoiceAssistant():
     def __init__(self):
         #self.r.energy_threshold = 350
         self.logger = logging.getLogger('Gesell.voice_assistant.VoiceAssistant')
+        if __name__ == '__main__': # Creates a logger if the module is called directly.
+            ch = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.addHandler(ch)
         self.r = sr.Recognizer()
         self.logger.info('Voice assistant has been initialized.')
         self.cmd = {'youtube' : set(), 'weather': True, 'stocks': True,

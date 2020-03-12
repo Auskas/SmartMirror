@@ -7,7 +7,7 @@ import logging
 
 class Stocks:
 
-    def __init__(self, frame, yandexbot, voiceAssistant):
+    def __init__(self, frame, yandexbot, voiceAssistant, gesturesAssistant):
         self.logger = logging.getLogger('Gesell.stockswidget.Stocks')
 
         if __name__ == '__main__': # Creates a logger if the module is called directly.
@@ -20,8 +20,9 @@ class Stocks:
         self.logger.debug('Initializing an instance of Stocks Widget...')
         self.yandexBot = yandexbot
         self.voiceAssistant = voiceAssistant
-        self.stocksLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SF UI Display Semibold", 18, "bold"))
-        self.stocksLbl.place(relx=0.97, rely=0.01, anchor='ne')
+        self.gesturesAssistant = gesturesAssistant
+        self.stocksLbl = Label(frame, text='', fg='lightblue', bg='black', font=("SFUIText", 24, "bold"))
+        self.stocksLbl.place(relx=0.95, rely=0.05, anchor='ne')
         self.logger.debug('Stocks Widget has been created.')
         self.widget()
 
@@ -29,28 +30,33 @@ class Stocks:
         """ Updates the widget every minute. Determines if the user decides to show or conceal the widget.
             There is a special string for April's Fool day."""
 
-        current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
-
-        # Special stocks ticker for April Fools' Day.
-        if current_time.month == 4 and current_time.day == 1:
-            new_rates = '$ 31.3↓   € 38.1↓   Brent 123.7↑'
-
-        # Regular update for the stocks.
-        else:
-            new_rates = self.yandexBot.rates_string
-        
-        # Cannot get the last exchange rates.
-        if new_rates == '':
+        if self.gesturesAssistant.is_face_detected == False:
             self.stocksLbl.config(text='')
+            self.stocksLbl.after(2000, self.widget)
 
-        elif new_rates != '' and self.voiceAssistant.cmd['stocks']:
-            self.stocksLbl.config(text=new_rates)
-
-        # The user decides to conceal the widget.
         else:
-            self.stocksLbl.config(text='')
+            current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
 
-        self.stocksLbl.after(60000, self.widget)
+            # Special stocks ticker for April Fools' Day.
+            if current_time.month == 4 and current_time.day == 1:
+                new_rates = '$ 31.3↓   € 38.1↓   Brent 123.7↑'
+
+            # Regular update for the stocks.
+            else:
+                new_rates = self.yandexBot.rates_string
+            
+            # Cannot get the last exchange rates.
+            if new_rates == '':
+                self.stocksLbl.config(text='')
+
+            elif new_rates != '' and self.voiceAssistant.cmd['stocks']:
+                self.stocksLbl.config(text=new_rates)
+
+            # The user decides to conceal the widget.
+            else:
+                self.stocksLbl.config(text='')
+
+            self.stocksLbl.after(1000, self.widget)
             
 if __name__ == '__main__':
     """ For testing purposes."""
@@ -62,15 +68,20 @@ if __name__ == '__main__':
         def __init__(self):
             self.rates_string = '$ 31.3↓   € 38.1↓   Brent 123.7↑'
 
+    class GesturesAssistant:
+        def __init__(self):
+            self.is_face_detected = True
+
     voiceAssistant = VoiceAssistant()
     yandexBot = YandexBot()
+    gesturesAssistant = GesturesAssistant()
     window = Tk()
     window.title('Main Window')
     window.configure(bg='black')
     window.overrideredirect(True)
     w, h = window.winfo_screenwidth(), window.winfo_screenheight()
     window.geometry("%dx%d+0+0" % (w, h))
-    a = Stocks(window, yandexBot, voiceAssistant)
+    a = Stocks(window, yandexBot, voiceAssistant, gesturesAssistant)
     window.mainloop()
 
 

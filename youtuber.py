@@ -1,10 +1,23 @@
 #!/usr/bin/python3
-# youtube_widget.py - uses vlc bindings to create a Youtube widget.
+# youtube_widget.py
+#
+# The main goal of the module is to create a widget that is used to play Youtube videos.
+# An instance of the Youtuber class follows the updates of detected voice commands and gestures.
+#
+# The playback can be switched to full screen, returned back to its initial windowed size,
+# stopped, paused or resumed. The commands are saved in a set at voiceAssistant.cmd['youtube'].
+# The following commands are tracked (they are self-explanetary): 'fullscreen', 'window', 
+# 'playback stop', 'playback resume', 'playback pause'.
+#  
+# A dedicated voice command is used to search the most relevant video on Youtube: 'video search [topic]'
+#
+# The pointing finger gesture controls the volume - a volume bar appears on top of the playback widget.
+# Moving the finger to the left and right turns the volume down and up accordingly.
 
 import logging
 from tkinter import *
 import vlc
-print(vlc.__file__)
+#print(vlc.__file__)
 vlc.logger.setLevel(logging.CRITICAL)
 import sys
 import time
@@ -33,7 +46,7 @@ class Youtuber:
         self.waveWidget = waveWidget
         self.volumeWidget = volumeWidget
         # self.w and self.h are the dimension of the main window. 
-        # They are used to switch the video into the fullscreen mode.
+        # The variables are used to switch the video into the fullscreen mode.
         self.w, self.h = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
         self.voiceAssistant = voiceAssistant
         _isMacOS   = sys.platform.startswith('darwin')
@@ -46,14 +59,14 @@ class Youtuber:
             args.append('--no-xlib')
         # Below are some Youtube links for testing purposes. Leave one uncommented to see it on the screen.
         #self.url = str('https://www.youtube.com/watch?v=1w7OgIMMRc4')
-        #self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
+        self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
         #self.url = str('https://www.youtube.com/watch?v=fdN46JyP1lI') # Football Club 1
         #self.url = str('https://www.youtube.com/watch?v=-fLF_ejuOjs&pbjreload=10') # Football Club 2
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
         #self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
         #self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
         #self.url = str('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
-        self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
+        #self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
         #self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
         
         self.instance = vlc.Instance(args)
@@ -73,18 +86,19 @@ class Youtuber:
         self.list_player.set_media_player(self.player)
         self.list_player.set_media_list(self.media_list)
         
-        # Videos are played in the canvas, which size can be adjusted in order to show it fullscreen.
+        # Videos are played in the canvas, which size can be adjusted in order to show it in the fullscreen mode.
         self.video_window_width = int(self.w * 0.3)
         self.video_window_height = int(self.video_window_width * self.h / self.w)
         self.widgetCanvas = Canvas(self.window, width=self.video_window_width,
                                    height=self.video_window_height, bg='black',
                                    borderwidth=0, highlightbackground='black')
-        self.widgetCanvas.place(relx=0.97, rely=0.8, anchor='se')
+        self.widgetCanvas.place(relx=0.95, rely=0.8, anchor='se')
+
         # Set the window id where to render VLC's video output.
         self.widget_canvas_id = self.widgetCanvas.winfo_id()
         self.player.set_xwindow(self.widget_canvas_id)
         self.player.set_fullscreen(False)
-        #self.set_window()
+
         self.fullscreen_status = False
 
         self.audio = alsaaudio.Mixer()
@@ -92,7 +106,8 @@ class Youtuber:
 
         self.list_player.play()
         self.video_status = 'running'
-        #self.set_fullscreen()
+        self.saved_video_status = None
+        self.volume_widget_timeout = None
         self.logger.info('Youtube widget has been initialized.')
 
     def status(self):
@@ -100,95 +115,114 @@ class Youtuber:
         When the user gives a command or commands associated to the widget,
         the set will contain those commands."""
         while True:
-            if self.gesturesAssistant.command == 'VoiceControl':
-                self.logger.debug('Voice control gesture detected!')
+            if self.gesturesAssistant.is_face_detected == False:
+                if self.saved_video_status == None:
+                    if self.video_status == 'running':
+                        self.saved_video_status = 'running'
+                    else:
+                        self.saved_video_status = 'stopped'
+                    self.video_stop()
+            else:
+                if self.saved_video_status != None:
+                    if self.saved_video_status == 'running':
+                        self.video_fullscreen_status()
+                        self.list_player.play()
+                    self.saved_video_status = None
+                if self.gesturesAssistant.command == 'VoiceControl':
+                    self.logger.debug('Voice control gesture detected!')
 
-                # Saves the current playback volume. Mutes the playback volume in order to 
-                # allow the user to give a voice command in a quite environment.
-                volume = self.player.audio_get_volume()
-                if volume > 0:
-                    self.player.audio_set_volume(0)    
-                time.sleep(0.5)
+                    # Saves the current playback volume. Mutes the playback volume in order to 
+                    # allow the user to give a voice command in a quite environment.
+                    volume = self.player.audio_get_volume()
+                    if volume > 0:
+                        self.player.audio_set_volume(0)    
+                    time.sleep(0.5)
 
-                # Launches the playback of Wave widget as well as the chime.
-                siriChimeThread = threading.Thread(target=self.waveWidget.play)
-                siriChimeThread.start()
-                self.waveWidget.play()
-                self.waveWidget.change_status()
+                    # Launches the playback of Wave widget as well as the chime.
+                    siriChimeThread = threading.Thread(target=self.waveWidget.play)
+                    siriChimeThread.start()
+                    self.waveWidget.play()
+                    self.waveWidget.change_status()
 
-                # Launches myCommand method of voiceAssistant to get user's command.
-                self.voiceAssistant.myCommand()
+                    # Launches myCommand method of voiceAssistant to get user's command.
+                    self.voiceAssistant.myCommand()
 
-                # If there is at least one command associated with the video playback,
-                # looks for the commands.
-                if len(self.voiceAssistant.cmd['youtube']) > 0:
-                    self.logger.debug('Processing voice command...')
-                    for c in self.voiceAssistant.cmd['youtube']:
+                    # If there is at least one command associated with the video playback,
+                    # looks for the commands.
+                    if len(self.voiceAssistant.cmd['youtube']) > 0:
+                        self.logger.debug('Processing voice command...')
+                        for c in self.voiceAssistant.cmd['youtube']:
 
-                        if c == 'fullscreen':
-                            self.logger.debug('Switching to video fullscreen mode...')
-                            self.set_fullscreen()
+                            if c == 'fullscreen':
+                                self.logger.debug('Switching to video fullscreen mode...')
+                                self.set_fullscreen()
 
-                        elif c == 'window':
-                            self.logger.debug('Switching to video window mode...')
-                            self.set_window()
+                            elif c == 'window':
+                                self.logger.debug('Switching to video window mode...')
+                                self.set_window()
 
-                        elif c.find('playback stop') != -1:
-                            self.set_window()
-                            self.video_stop()
+                            elif c.find('playback stop') != -1:
+                                self.set_window()
+                                self.video_stop()
 
-                        elif c.find('playback pause') != -1:
-                            self.list_player.pause()
+                            elif c.find('playback pause') != -1:
+                                self.list_player.pause()
 
-                        elif c.find('playback resume') != -1:
-                            self.video_fullscreen_status()
-                            self.list_player.play()
+                            elif c.find('playback resume') != -1:
+                                self.video_fullscreen_status()
+                                self.list_player.play()
 
-                        elif c.find('video search') != -1:
-                            self.video_fullscreen_status()
-                            topic = c.replace('video search ', '')
-                            self.logger.debug(f'Processing video request {topic}.')
-                            self.search(topic)
+                            elif c.find('video search') != -1:
+                                self.video_fullscreen_status()
+                                topic = c.replace('video search ', '')
+                                self.logger.debug(f'Processing video request {topic}.')
+                                self.search(topic)
 
-                self.waveWidget.change_status()
-                # Restores the playback volume to the saved value.
-                self.player.audio_set_volume(volume)
-                # Removes all the voice commands related to the widget by making a new empty set.
-                self.voiceAssistant.cmd['youtube'] = set()
-                # Removes the gesture.
-                self.gesturesAssistant.command = 'None'
+                    self.waveWidget.change_status()
+                    # Restores the playback volume to the saved value.
+                    self.player.audio_set_volume(volume)
+                    # Removes all the voice commands related to the widget by making a new empty set.
+                    self.voiceAssistant.cmd['youtube'] = set()
+                    # Removes the gesture.
+                    self.gesturesAssistant.command = 'None'
 
-            # The condition below is used to change the system audio volume based on the gestureAssistant diff value.
-            # gestureAssistant diff value changes when the detected pointing finger moves upwards or downwards.
-            if self.gesturesAssistant.diff != 0:
-                audio_diff = self.gesturesAssistant.diff
-                self.audio_volume = self.audio.getvolume()[0]
-                # If the finger moves to the right and there is enough space for turning the volume up.
-                if audio_diff > 0 and audio_diff + self.audio_volume < 100:
-                    self.audio_volume += audio_diff
-                    self.audio.setvolume(self.audio_volume)
-                # If the finger moves to the right and there is no space for turning the volume up. The volume is set to the maximum value.
-                elif audio_diff > 0 and audio_diff + self.audio_volume > 100:
-                    self.audio_volume = 100
-                    self.audio.setvolume(self.audio_volume)
-                # If the finger moves to the left and there is enough space for turning the volume down. 
-                elif audio_diff < 0 and abs(audio_diff) < self.audio_volume:
-                    self.audio_volume += audio_diff
-                    self.audio.setvolume(self.audio_volume)
-                # If the finger moves to the left and there is no space for turning the volume down. Literally mutes the playback.
-                elif audio_diff < 0 and audio_diff > self.audio_volume:
-                    self.audio_volume = 0
-                    self.audio.setvolume(self.audio_volume)
+                # The condition below is used to change the system audio volume based on the gestureAssistant diff value.
+                # gestureAssistant diff value is changed when the detected pointing finger moves either to the left or to the right.
+                if self.gesturesAssistant.diff != 0:
+                    audio_diff = self.gesturesAssistant.diff
+                    self.audio_volume = self.audio.getvolume()[0]
+                    # If the finger moves to the right and there is enough space for turning the volume up.
+                    if audio_diff > 0 and audio_diff + self.audio_volume < 100:
+                        self.audio_volume += audio_diff
+                        self.audio.setvolume(self.audio_volume)
+                    # If the finger moves to the right and there is no space for turning the volume up. The volume is set to the maximum value.
+                    elif audio_diff > 0 and audio_diff + self.audio_volume > 100:
+                        self.audio_volume = 100
+                        self.audio.setvolume(self.audio_volume)
+                    # If the finger moves to the left and there is enough space for turning the volume down. 
+                    elif audio_diff < 0 and abs(audio_diff) < self.audio_volume:
+                        self.audio_volume += audio_diff
+                        self.audio.setvolume(self.audio_volume)
+                    # If the finger moves to the left and there is no space for turning the volume down. Literally mutes the playback.
+                    elif audio_diff < 0 and audio_diff > self.audio_volume:
+                        self.audio_volume = 0
+                        self.audio.setvolume(self.audio_volume)
 
-                self.volumeWidget.ball_position(self.audio_volume)
+                    self.volumeWidget.ball_position(self.audio_volume)
 
-            # Shows the volume widget if the pointing finger is detected for over 20 consecutive frames.
-            if self.volumeWidget.is_concealed and self.gesturesAssistant.exposure_time >= 20:
-                self.volumeWidget.show()
-            # Hides the volume widget if the pointing finger is not detected.
-            elif self.volumeWidget.is_concealed == False and self.gesturesAssistant.exposure_time == 0:
-                self.volumeWidget.hide()
-            time.sleep(0.05)
+                # Shows the volume widget if the pointing finger is detected for over 3 consecutive frames.
+                if self.volumeWidget.is_concealed and self.gesturesAssistant.exposure_time >= 3:
+                    self.volume_widget_timeout = 20
+                    self.volumeWidget.show()
+                # Hides the volume widget if the pointing finger is not detected.
+                # The 'volume_widget_timeout' variable is used for not hiding the volume bar immediately.
+                elif self.volumeWidget.is_concealed == False and self.gesturesAssistant.exposure_time == 0:
+                    if self.volume_widget_timeout == 0:
+                        self.volumeWidget.hide()
+                    else:
+                        self.volume_widget_timeout -= 1
+
+                time.sleep(0.05)
             
     def video_fullscreen_status(self):
         """ The method is used to place the widget back either in the fullscreen or windowed mode
@@ -294,7 +328,6 @@ if __name__ == '__main__':
         class GesturesAssistant:
             def __init__(self):
                 self.command = 'VoiceControl'
-                #self.command = 'None'
                 
         class WaveWidget:
             def __init__(self):

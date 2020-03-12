@@ -12,7 +12,7 @@ class WaveWidget:
     def __init__(self, window, status=False):
         self.window = window
         self.status = status
-        self.frames = [PhotoImage(file='wave.gif',format = 'gif -index %i' %(i)) for i in range(1,40)]
+        self.frames = [PhotoImage(file=f'icons{os.sep}wave.gif',format = 'gif -index %i' %(i)) for i in range(1,40)]
         self.waveLbl = Label(self.window, bg='black', bd=0)
         self.waveLbl.place(relx=0.5, rely=0.5, anchor=CENTER)
         self.device = alsaaudio.PCM(device='default')

@@ -1,5 +1,27 @@
 #!/usr/bin/python3
-# gestures_recognizer.py - finger detection and tracking using opencv and a trained CNN model.
+# gestures_recognizer.py
+#
+# If the module is executed directly it offers to take the skin color histogram.
+# The module uses a trained CNN to recognize static hand gestures in the top right area of the video capture.
+# The area, also known as ROI, is a square which side length is given by the self.ROI_SIZE variable.
+# The ROI is preprocessed before it is conveyed to the CNN:
+#   - a skin color histogram is applied to the ROI; 
+#   - the resulting skin shapes are masked in order to get the black background and the white skin.
+#     The original source: http://www.benmeline.com/finger-tracking-with-opencv-and-python/
+# The CNN gets the processed ROI and determines the static gesture. The result can be:
+#   - one of the following gestures are detected: five fingers open palm, four fingers, the peace sign,
+#                                                 sign of the horns, thumb up, inverted L, and the pointing finger;
+#   - None. That means that the CNN is absolutely sure there is no known static hand gestures in the ROI;
+#   - Unknown. The CNN detects a static hand gesture in the ROI, but the level of certainty is below the threshold.
+#     The threshold can be changed in the 'tracker' method. 
+#     The local variable 'prediction' is compaired against the threshold.
+# If the detected gesture is 'Pointing finger' a special algorithm starts to track the tip of the finger.
+# The approach is the following: 
+#   - the biggest contour is determined;
+#   - the hull is calculated as well as its centre point;
+#   - the defects of the hull are found. The tip of the finger is one of the defects;
+#   - the farthest point from the centre is counted as the tip.
+
 
 from tensorflow.keras.models import load_model
 import numpy as np
@@ -18,48 +40,93 @@ class GesturesRecognizer:
             ch.setFormatter(formatter)
             self.logger.setLevel(logging.DEBUG)
             self.logger.addHandler(ch)
-            #import alsaaudio
-            #m = alsaaudio.Mixer()
-            #audio_volume = int(m.getvolume()[0])
 
-        if os.path.isfile('hand_histogram.npy'):
-            try:
-                self.hand_hist = np.load('hand_histogram.npy')
-                self.logger.info('Skin histogram has been loaded.')
-            except Exception as error:
-                self.logger.error('Canniot load skin histogram.')
-        else:
-            self.hand_hist = None
-            self.logger.warning('Hand histogram file has not been found.')
-        
-        try:
-            self.model = load_model(f'Working_models{os.sep}Model_without_optimizer_32x32_3conv-32-64-128_2dense-128.h5')
-            self.logger.info('The CNN has been loaded.')
-        except Exception as error:
-            self.logger.error(f'Cannot load the CNN: {error}')
-
-        self.LABELS = ['Five', 'Four', 'Inverted L', 'Peace', 'Pointing finger', 'None', 'Sign of the horns', 'Thumb up']
-        self.LABEL = ''
         self.cam = cv2.VideoCapture(0)
-        self.logger.debug(f'Brightness {self.cam.get(10)}')
-        self.logger.debug(f'Contrast {self.cam.get(11)}')
-        self.cam.set(10, -5.0) # Sets the brightness of the camera.
-        self.cam.set(11, 150) # Sets the contrast of the camera.
-        self.tips = []
-        self.exposure_time = 0 # Increases by one every frame the tip of a finger is detected.
-        #ret, image = cam.read()
-        self.ROI_SIZE = 250
-        self.IMG_SIZE = 32
-        # Frame per second rate - the number of frames analyzed per second.
-        self.FPS = 20
-        self.TIP_TEXT = 'The tip of the finger is being tracked'
-        ret, self.frame = self.cam.read()
-        self.begin_X, self.begin_Y = int(self.frame.shape[1] - self.ROI_SIZE), 0
-        self.end_X, self.end_Y = self.frame.shape[1], self.ROI_SIZE
-        self.finger_tip = None # the coordinates of the pointing finger tip.
-        self.diff = 0
-        self.command = 'None'
-        self.max_contour_found = None
+        # Checks if there is a camera device on board.
+        # If it is found sets up the gestures recognition parameters and loads the necessary data,
+        # Otherwise, the module simply sets the three main outbound parameters to default:
+        #   - self.is_face_detected = True - a virtual person is always exposed to the mirror;
+        #   - self.command = 'None' - voice control is disabled.
+        #   - self.camera_found = False - the main module does not start a daemon to track gestures.
+        if self.cam.read()[0] == False:
+            self.camera_found = False
+            self.logger.warning('No camera device has been found on board.')
+            self.is_face_detected = True
+            self.command = 'None'
+            self.camera_found = False
+        else:
+            self.logger.info('A camera device has been found on board.')
+            self.camera_found = True
+            # Loads the histogram from a file.
+            if os.path.isfile('hand_histogram.npy'):
+                try:
+                    self.hand_hist = np.load('hand_histogram.npy')
+                    self.logger.info('Skin histogram has been loaded.')
+                except Exception as error:
+                    self.logger.error('Cannot load skin histogram.')
+            else:
+                self.hand_hist = None
+                self.logger.warning('Hand histogram file has not been found.')
+            # Loads the trained CNN model.
+            try:
+                self.model = load_model(f'Working_models{os.sep}Model_without_optimizer_32x32_3conv-32-64-128_2dense-128.h5')
+                self.logger.info('The CNN has been loaded.')
+            except Exception as error:
+                self.logger.error(f'Cannot load the CNN: {error}')
+
+            self.LABELS = ['Five', 'Four', 'Inverted L', 'Peace', 'Pointing finger', 'None', 'Sign of the horns', 'Thumb up']
+            self.LABEL = ''
+            #self.logger.debug(f'Brightness {self.cam.get(10)}')
+            #self.logger.debug(f'Contrast {self.cam.get(11)}')
+            #self.cam.set(10, -5.0) # Sets the brightness of the camera.
+            #self.cam.set(11, 150) # Sets the contrast of the camera.
+            self.cam.set(10, -1) # Sets the brightness of the camera.
+            self.cam.set(11, 80) # Sets the contrast of the camera.
+            self.tips = []
+            self.exposure_time = 0 # Increases by one every frame the tip of a finger is detected.
+            self.ROI_SIZE = 250
+            self.IMG_SIZE = 32 # the CNN is trained on the given size of images.
+            self.FPS = 20 # the number of frames analyzed per second.
+            self.TIP_TEXT = 'The tip of the finger is being tracked'
+            ret, self.frame = self.cam.read()
+            self.begin_X, self.begin_Y = int(self.frame.shape[1] - self.ROI_SIZE), 0
+            self.end_X, self.end_Y = self.frame.shape[1], self.ROI_SIZE
+            self.finger_tip = None # the coordinates of the pointing finger tip.
+            self.diff = 0
+            self.command = 'None'
+            self.max_contour_found = None
+
+            self.faceCascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+            self.is_face_detected = False
+
+    def face_detection(self, frame):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        faces = self.faceCascade.detectMultiScale(
+            gray,
+            scaleFactor=1.2,
+            minNeighbors=5,
+            minSize=(20,20)
+        )
+
+        if len(faces) > 0:
+            # Face detection timeout in seconds. Determines how long the mirror shows the widgets
+            # after a person leaves it.
+            if self.is_face_detected == False:
+                self.logger.info('A user has just been exposed to the mirror.')
+            self.is_face_detected = self.FPS * 100
+        else:
+            if self.is_face_detected > 0:
+                self.is_face_detected -= 1
+            else:
+                if self.is_face_detected == True:
+                    self.logger.info('The user has just left the mirror.')
+                self.is_face_detected = False
+
+        for (x,y,w,h) in faces:
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+            roi_gray = gray[y:y+h, x:x+w]
+        return frame
 
     def draw_rectangle(self, frame):
         # Get the number of rows and columns in the frame.
@@ -199,20 +266,23 @@ class GesturesRecognizer:
         # If a hand snapshot is not taken the script waits for the user to put their hand into the ROI and press Spacebar.
         while True:
             ret, frame = self.cam.read()
+            frame = cv2.flip(frame, 1)
             roi = frame[self.begin_Y:self.end_Y, self.begin_X:self.end_X]
             init_roi = roi.copy()
             self.draw_rectangle(roi)
             text = 'Cover all the green boxes with your hand and press Spacebar'
             cv2.putText(frame, text, (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0) , 2)
-            cv2.imshow('ROI', color_roi)        
+            cv2.imshow('ROI', init_roi)        
             cv2.imshow('Camera feed', frame)
             k = cv2.waitKey(30) & 0xff
             if k == 27:
-                cam.release()
+                self.cam.release()
                 cv2.destroyAllWindows()
                 break
             elif k == 32:
                 self.set_hand_hist(init_roi)
+                self.cam.release()
+                cv2.destroyAllWindows()
 
 
     def tracker(self):
@@ -220,6 +290,7 @@ class GesturesRecognizer:
             ret, frame = self.cam.read()
             frame = cv2.flip(frame, 1)
             roi = frame[self.begin_Y:self.end_Y, self.begin_X:self.end_X]
+            frame = self.face_detection(frame)
             cv2.rectangle(frame, (frame.shape[1] - self.ROI_SIZE, 0),
                          (frame.shape[1], self.ROI_SIZE), 
                          (255, 0, 0), 2)
@@ -278,27 +349,39 @@ class GesturesRecognizer:
                         start = tuple(self.max_contour_found[s][0])
                         end = tuple(self.max_contour_found[e][0])
                         far = tuple(self.max_contour_found[f][0])
-                        #cv2.circle(color_roi, start, 5, [255, 0, 255], -1)
 
                     # In order to avoid wrong tracking of the tip while the user is moving their hand to the ROI,
                     # the script waits for (exposure_time * FPS miliseconds) before starts tracking the tip.
-                    if self.exposure_time > 20:
+                    if self.exposure_time > 3:
                         cv2.putText(frame, self.TIP_TEXT, (10,60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255) , 2)
-                        #cv2.putText(frame, f'Audio volume: {self.audio_volume}%', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255) , 2)
-                        
+                                                
+                        # Averaging is used in order to smooth the effect of fluctuation of the finger tip detection.
+                        # The last three coordinates are used to evaluate the average value.
+                        if len(self.tips) > 0 and self.finger_tip != None:
+                            average_current = self.finger_tip[0] + self.tips[len(self.tips) - 1][0] \
+                                              + self.tips[len(self.tips) - 2][0]
+                            average_last = self.tips[len(self.tips) - 1][0] + self.tips[len(self.tips) - 2][0] \
+                                              + self.tips[len(self.tips) - 3][0]
+                            average_current = int(average_current / 3)
+                            average_last = int(average_last / 3)
+
                         # Very first coordinate of tracking.
                         if len(self.tips) == 0 and self.finger_tip != None:
+                            self.tips.append(self.finger_tip)
+                            self.tips.append(self.finger_tip)
                             self.tips.append(self.finger_tip)
                             continue
                         
                         # If it is at least second detected coordinate and it is not far away from the previous one.
                         elif (
-                            self.finger_tip != None
-                            and len(self.tips) > 0
-                            and abs(self.finger_tip[1] - self.tips[len(self.tips) - 1][1]) < 20
-                            and abs(self.finger_tip[0] - self.tips[len(self.tips) - 1][0]) < 25
+                            self.finger_tip != None and
+                            len(self.tips) > 0 and
+                            abs(self.finger_tip[1] - self.tips[len(self.tips) - 1][1]) < 15 and
+                            abs(average_last - average_current) < 25
+                            #and abs(self.finger_tip[0] - self.tips[len(self.tips) - 1][0]) < 25
                             ):
-                            self.tips.append(self.finger_tip)
+                            #self.tips.append(self.finger_tip)
+                            self.tips.append((average_current, self.finger_tip[1]))
 
                             if len(self.tips) > 15:
                                 self.tips.pop(0)
@@ -311,6 +394,7 @@ class GesturesRecognizer:
                             # Changes audio volume when the finger moves either to the left or to the right.
                             # The tip coordinates are in the following format (x,y)
                             self.diff = self.tips[len(self.tips) - 1][0] - self.tips[len(self.tips) - 2][0]
+                            #self.diff = int(self.diff * 1.5)
 
                         # Something went wrong: either the finger is moved too fast or an artefact is detected as the finger.
                         else:
@@ -327,17 +411,12 @@ class GesturesRecognizer:
                 cv2.destroyAllWindows()
                 break
             frame_original = cv2.resize(frame, (960, 720))
-            cv2.imshow('ROI', color_roi)
+            #cv2.imshow('ROI', color_roi)
             cv2.imshow('Preprocessed ROI', preprocessed)
             cv2.imshow('Camera feed', frame)
 
 if __name__ == '__main__':
-    import alsaaudio
     gestures_recognizer = GesturesRecognizer()
-    gestures_recognizer.tracker()
-
-
-
-
-        
-
+    if gestures_recognizer.camera_found:
+        gestures_recognizer.tracker()
+    #gestures_recognizer.get_histogram()

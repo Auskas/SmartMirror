@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 
 class Weather:
 
-    def __init__(self, frame, voiceAssistant):
+    def __init__(self, frame, voiceAssistant, gesturesAssistant):
         self.logger = logging.getLogger('Gesell.weatherwidget.Weather')
 
         if __name__ == '__main__': # Creates a logger if the module is called directly.
@@ -22,6 +22,7 @@ class Weather:
 
         self.logger.debug('Initializing an instance of Weather Widget...')
         self.voiceAssistant = voiceAssistant
+        self.gesturesAssistant = gesturesAssistant
         self.frame = frame
         try:
             with open("weathertoken.txt") as f:
@@ -42,7 +43,7 @@ class Weather:
 
         # The main frame of the widget.
         self.weather_frame = Frame(frame, bg='black', bd=0)
-        self.weather_frame.place(relx=0.03, rely=0.2)
+        self.weather_frame.place(relx=0.05, rely=0.25)
 
         # The inner top frame with the name of the city.
         self.topframe_inside = Frame(self.weather_frame, bg='black', bd=0)
@@ -52,7 +53,7 @@ class Weather:
         self.bottomframe_inside = Frame(self.weather_frame, bg='black', bd=0)
         self.bottomframe_inside.grid(column=0, row=1, sticky='w')
 
-        self.titleLbl = Label(self.topframe_inside, text="Москва", fg='lightblue', bg='black', font=("SF UI Display Semibold", 13, "bold"))
+        self.titleLbl = Label(self.topframe_inside, text="Москва", fg='lightblue', bg='black', font=("SFUIText", 22, "bold"))
         self.titleLbl.pack(side=LEFT)
 
         # The icon of the current weather taken from the Yandex_Weather folder.
@@ -63,7 +64,7 @@ class Weather:
         self.icon.pack(side=LEFT)
 
         # The current temperature frame placed to the right of the weather icon.
-        self.degrees = Label(self.bottomframe_inside, text="-5°C", fg='lightblue', bg='black', font=("SF UI Display Black", 22, "bold"))
+        self.degrees = Label(self.bottomframe_inside, text="-5°C", fg='lightblue', bg='black', font=("SFUIText", 22, "bold"))
         self.degrees.pack(side=LEFT)
 
         # The forecast frame that is placed to the right of the current temperature frame.
@@ -78,10 +79,10 @@ class Weather:
         self.next_frame_bottom = Frame(self.next_frame, bg='black', bd=0)
         self.next_frame_bottom.grid(column=0, row=1, sticky='w')
 
-        self.next_forecast = Label(self.next_frame_top, text="Днём -3°C", fg='lightblue', bg='black', font=("SF UI Display Semibold", 12, "bold"))
+        self.next_forecast = Label(self.next_frame_top, text="Днём -3°C", fg='lightblue', bg='black', font=("SFUIText", 12, "bold"))
         self.next_forecast.pack(side = LEFT)
 
-        self.next_next_forecast = Label(self.next_frame_bottom, text="Вечером -6°C", fg='lightblue', bg='black', font=("SF UI Display Semibold", 12, "bold"))
+        self.next_next_forecast = Label(self.next_frame_bottom, text="Вечером -6°C", fg='lightblue', bg='black', font=("SFUIText", 12, "bold"))
         self.next_next_forecast.pack(side = LEFT)
         
         # The following instance variable is used to determine when to update the weather.
@@ -91,61 +92,69 @@ class Weather:
         self.widget()
 
     def widget(self):
-        # Special weather forecast for April Fools' Day.
-        current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
-        if current_time.month == 4 and current_time.day == 1 and self.seconds_counter > 3600:
-            self.forecast = {'fact': {'temp': -1, 'icon': 'fct_+sn'},
-                        'forecast': {'parts': [{'temp_avg': -5,
-                                                'part_name': 'evening'},
-                                               {'temp_avg': -8,
-                                                'part_name': 'night'}]}}
-            self.seconds_counter = 0
-
-        # The weather forecast is updated each hour.
-        elif self.seconds_counter > 3600:
-            self.forecast = self.get_weather()
-            self.seconds_counter = 0
-
-        # The following condition is used to show the widget.
-        if self.forecast != None and self.voiceAssistant.cmd['weather']:
-            self.titleLbl.config(text='Москва')
-            temp_now = str(self.forecast['fact']['temp'])
-            weather_icon = self.forecast['fact']['icon']
-            
-            render = ImageTk.PhotoImage(Image.open(f'.{os.sep}Yandex_Weather{os.sep}{weather_icon}.png'))
-            self.icon.configure(image=render)
-            self.icon.image = render
-            
-            temp_next = str(self.forecast['forecast']['parts'][0]['temp_avg'])
-            part_next = self.forecast['forecast']['parts'][0]['part_name']
-            
-            temp_next_next = str(self.forecast['forecast']['parts'][1]['temp_avg'])
-
-            # The following conditions are for determining the names of the next two part of a day.
-            if part_next == 'night':
-                part_next, part_next_next  = 'Ночью', 'утром'
-            elif part_next == 'morning':
-                part_next, part_next_next  = 'Утром', 'днём'
-            elif part_next == 'day':
-                part_next, part_next_next  = 'Днём', 'вечером'
-            else:
-                part_next, part_next_next  = 'Вечером', 'ночью'
-                
-            self.degrees.config(text=f'{temp_now}° ')
-            self.next_forecast.config(text=f'{part_next} {temp_next},')
-            self.next_next_forecast.config(text=f'{part_next_next} {temp_next_next}')
-
-        # Conceals the widget if the proper voice command is given.
-        else:
+        if self.gesturesAssistant.is_face_detected == False:
             self.degrees.config(text='')
             self.next_forecast.config(text='')
             self.next_next_forecast.config(text='')
             self.titleLbl.config(text='')
             self.icon.configure(image='')
+            self.degrees.after(2000, self.widget)
+        else:
+            # Special weather forecast for April Fools' Day.
+            current_time = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+            if current_time.month == 4 and current_time.day == 1 and self.seconds_counter > 3600:
+                self.forecast = {'fact': {'temp': -1, 'icon': 'fct_+sn'},
+                            'forecast': {'parts': [{'temp_avg': -5,
+                                                    'part_name': 'evening'},
+                                                   {'temp_avg': -8,
+                                                    'part_name': 'night'}]}}
+                self.seconds_counter = 0
 
-        # Adds a second to the counter and call the method again in a second.
-        self.seconds_counter += 1
-        self.degrees.after(1000, self.widget)
+            # The weather forecast is updated each hour.
+            elif self.seconds_counter > 3600:
+                self.forecast = self.get_weather()
+                self.seconds_counter = 0
+
+            # The following condition is used to show the widget.
+            if self.forecast != None and self.voiceAssistant.cmd['weather']:
+                self.titleLbl.config(text='Москва')
+                temp_now = str(self.forecast['fact']['temp'])
+                weather_icon = self.forecast['fact']['icon']
+                
+                render = ImageTk.PhotoImage(Image.open(f'.{os.sep}Yandex_Weather{os.sep}{weather_icon}.png'))
+                self.icon.configure(image=render)
+                self.icon.image = render
+                
+                temp_next = str(self.forecast['forecast']['parts'][0]['temp_avg'])
+                part_next = self.forecast['forecast']['parts'][0]['part_name']
+                
+                temp_next_next = str(self.forecast['forecast']['parts'][1]['temp_avg'])
+
+                # The following conditions are for determining the names of the next two part of a day.
+                if part_next == 'night':
+                    part_next, part_next_next  = 'Ночью', 'утром'
+                elif part_next == 'morning':
+                    part_next, part_next_next  = 'Утром', 'днём'
+                elif part_next == 'day':
+                    part_next, part_next_next  = 'Днём', 'вечером'
+                else:
+                    part_next, part_next_next  = 'Вечером', 'ночью'
+                    
+                self.degrees.config(text=f'{temp_now}° ')
+                self.next_forecast.config(text=f'{part_next} {temp_next},')
+                self.next_next_forecast.config(text=f'{part_next_next} {temp_next_next}')
+
+            # Conceals the widget if the proper voice command is given.
+            else:
+                self.degrees.config(text='')
+                self.next_forecast.config(text='')
+                self.next_next_forecast.config(text='')
+                self.titleLbl.config(text='')
+                self.icon.configure(image='')
+
+            # Adds a second to the counter and call the method again in a second.
+            self.seconds_counter += 1
+            self.degrees.after(1000, self.widget)
         
 
     def get_weather(self):
@@ -169,14 +178,20 @@ if __name__ == '__main__':
     class VoiceAssistant:
         def __init__(self):
             self.cmd = {'weather': True}
+
+    class GesturesAssistant:
+        def __init__(self):
+            self.is_face_detected = True
+
     voiceAssistant = VoiceAssistant()
+    gesturesAssistant = GesturesAssistant()
     window = Tk()
     window.title('Main Window')
     window.configure(bg='black')
     window.overrideredirect(True)
     w, h = window.winfo_screenwidth(), window.winfo_screenheight()
     window.geometry("%dx%d+0+0" % (w, h))
-    a = Weather(window, voiceAssistant)
+    a = Weather(window, voiceAssistant, gesturesAssistant)
     window.mainloop()
 
 
