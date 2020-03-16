@@ -5,7 +5,7 @@
 # The module uses a trained CNN to recognize static hand gestures in the top right area of the video capture.
 # The area, also known as ROI, is a square which side length is given by the self.ROI_SIZE variable.
 # The ROI is preprocessed before it is conveyed to the CNN:
-#   - a skin color histogram is applied to the ROI; 
+#   - a skin color histogram is applied to the ROI;
 #   - the resulting skin shapes are masked in order to get the black background and the white skin.
 #     The original source: http://www.benmeline.com/finger-tracking-with-opencv-and-python/
 # The CNN gets the processed ROI and determines the static gesture. The result can be:
@@ -13,10 +13,10 @@
 #                                                 sign of the horns, thumb up, inverted L, and the pointing finger;
 #   - None. That means that the CNN is absolutely sure there is no known static hand gestures in the ROI;
 #   - Unknown. The CNN detects a static hand gesture in the ROI, but the level of certainty is below the threshold.
-#     The threshold can be changed in the 'tracker' method. 
+#     The threshold can be changed in the 'tracker' method.
 #     The local variable 'prediction' is compaired against the threshold.
 # If the detected gesture is 'Pointing finger' a special algorithm starts to track the tip of the finger.
-# The approach is the following: 
+# The approach is the following:
 #   - the biggest contour is determined;
 #   - the hull is calculated as well as its centre point;
 #   - the defects of the hull are found. The tip of the finger is one of the defects;
@@ -54,6 +54,8 @@ class GesturesRecognizer:
             self.is_face_detected = True
             self.command = 'None'
             self.camera_found = False
+            self.diff = 0
+            self.exposure_time = 0
         else:
             self.logger.info('A camera device has been found on board.')
             self.camera_found = True
@@ -136,15 +138,15 @@ class GesturesRecognizer:
         self.hand_rect_one_x = np.array(
             [6 * rows / 20, 6 * rows / 20, 6 * rows / 20, 10 * rows/ 20, 10 *rows / 20, 10 *rows / 20,
             14 * rows / 20, 14 * rows / 20, 14 * rows / 20], dtype=np.uint32)
-        
+
         self.hand_rect_one_y = np.array(
             [9 * cols / 20, 10 * cols / 20, 11 * cols / 20, 9 * cols/ 20, 10 *cols / 20, 11 *cols / 20,
             9 * cols / 20, 10 * cols / 20, 11 * cols / 20], dtype=np.uint32)
-        
+
         self.hand_rect_two_x, self.hand_rect_two_y = self.hand_rect_one_x + 10, self.hand_rect_one_y + 10
-        
+
         self.number_of_rectangles = self.hand_rect_one_x.size
-        
+
         for i in range(self.number_of_rectangles):
             cv2.rectangle(frame, (self.hand_rect_one_y[i], self.hand_rect_one_x[i]),
                             (self.hand_rect_two_y[i], self.hand_rect_two_x[i]),
@@ -272,7 +274,7 @@ class GesturesRecognizer:
             self.draw_rectangle(roi)
             text = 'Cover all the green boxes with your hand and press Spacebar'
             cv2.putText(frame, text, (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0) , 2)
-            cv2.imshow('ROI', init_roi)        
+            cv2.imshow('ROI', init_roi)
             cv2.imshow('Camera feed', frame)
             k = cv2.waitKey(30) & 0xff
             if k == 27:
@@ -292,7 +294,7 @@ class GesturesRecognizer:
             roi = frame[self.begin_Y:self.end_Y, self.begin_X:self.end_X]
             frame = self.face_detection(frame)
             cv2.rectangle(frame, (frame.shape[1] - self.ROI_SIZE, 0),
-                         (frame.shape[1], self.ROI_SIZE), 
+                         (frame.shape[1], self.ROI_SIZE),
                          (255, 0, 0), 2)
             color_roi = roi.copy()
             roi = self.apply_hist_mask(roi)
@@ -354,7 +356,7 @@ class GesturesRecognizer:
                     # the script waits for (exposure_time * FPS miliseconds) before starts tracking the tip.
                     if self.exposure_time > 3:
                         cv2.putText(frame, self.TIP_TEXT, (10,60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255) , 2)
-                                                
+
                         # Averaging is used in order to smooth the effect of fluctuation of the finger tip detection.
                         # The last three coordinates are used to evaluate the average value.
                         if len(self.tips) > 0 and self.finger_tip != None:
@@ -371,7 +373,7 @@ class GesturesRecognizer:
                             self.tips.append(self.finger_tip)
                             self.tips.append(self.finger_tip)
                             continue
-                        
+
                         # If it is at least second detected coordinate and it is not far away from the previous one.
                         elif (
                             self.finger_tip != None and

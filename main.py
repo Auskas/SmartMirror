@@ -85,7 +85,7 @@ if __name__ == '__main__':
         window.title('Main Window')
         window.configure(bg='black')
         # Disables closing the window by standard means, such as ALT+F4 etc.
-        window.overrideredirect(True)
+        # window.overrideredirect(True)
         w, h = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry("%dx%d+0+0" % (w, h))
         logger.debug('Main window has been created')
@@ -115,4 +115,3 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         sys.exit()
-
