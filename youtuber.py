@@ -59,14 +59,14 @@ class Youtuber:
             args.append('--no-xlib')
         # Below are some Youtube links for testing purposes. Leave one uncommented to see it on the screen.
         #self.url = str('https://www.youtube.com/watch?v=1w7OgIMMRc4')
-        self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
+        #self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
         #self.url = str('https://www.youtube.com/watch?v=fdN46JyP1lI') # Football Club 1
         #self.url = str('https://www.youtube.com/watch?v=-fLF_ejuOjs&pbjreload=10') # Football Club 2
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
         #self.url = str('https://www.youtube.com/watch?v=diRtRhcaUNI') # Metallica
         #self.url = str('https://www.youtube.com/watch?v=n_GFN3a0yj0') # AC/DC Thunderstruck
         #self.url = str('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
-        #self.url = str('https://www.youtube.com/watch?v=wqPby9nOAKI') # NTV Russia live
+        self.url = str('https://www.youtube.com/watch?v=dI4jr5HyuT0') # NTV Russia live
         #self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
         
         self.instance = vlc.Instance(args)

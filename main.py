@@ -24,6 +24,7 @@ from gestures_recognizer import GesturesRecognizer
 from wave_widget import WaveWidget
 from voice_assistant import VoiceAssistant
 from volume_widget import Volume
+from covid import Covid
 
 
 logger = logging.getLogger('Gesell')
@@ -56,36 +57,36 @@ if __name__ == '__main__':
         parserBot = ParserBot()
 
         yandexThread = threading.Thread(target=parserBot.bot) # Thread 2. Updates stock rates.
-        yandexThread.daemon = True
+        #yandexThread.daemon = True
         yandexThread.start()
 
         teamBot = TeamBot()
 
         nextgameBot = NextGame(databaseBot, teamBot)
         nextgameThread = threading.Thread(target=nextgameBot.upcoming_game) # Thread 3. Updates next game data.
-        nextgameThread.daemon = True
+        #nextgameThread.daemon = True
         nextgameThread.start()
 
         liveScore = LiveScore(databaseBot)
         scoreThread = threading.Thread(target=liveScore.score_notifier) # Thread 4. Updates live score.
-        scoreThread.daemon = True
+        #scoreThread.daemon = True
         scoreThread.start()
 
         newsruThread = threading.Thread(target=parserBot.newsbot) # Thread 5. Updates the news.
-        newsruThread.daemon = True
+        #newsruThread.daemon = True
         newsruThread.start()
 
         gesturesAssistant = GesturesRecognizer()
         if gesturesAssistant.camera_found:
             gesturesThread = threading.Thread(target=gesturesAssistant.tracker) # Thread 7. Recognizes gestures for controlling the mirror.
-            gesturesThread.daemon = True
+            #gesturesThread.daemon = True
             gesturesThread.start()
 
         window = Tk()
         window.title('Main Window')
         window.configure(bg='black')
         # Disables closing the window by standard means, such as ALT+F4 etc.
-        window.overrideredirect(True)
+        #window.overrideredirect(True)
         w, h = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry("%dx%d+0+0" % (w, h))
         logger.debug('Main window has been created')
@@ -108,8 +109,12 @@ if __name__ == '__main__':
 
         youtubeWidget = Youtuber(window, gesturesAssistant, voiceAssistant, waveWidget, volumeWidget) # Thread 8. The thread is used to control Youtube widget.
         youtubeThread = threading.Thread(target=youtubeWidget.status)
-        youtubeThread.daemon = True
+        #youtubeThread.daemon = True
         youtubeThread.start()
+
+        covidWidget = Covid(window, parserBot, gesturesAssistant)
+        covidThread = threading.Thread(target=parserBot.covidbot)
+        covidThread.start()
 
         window.mainloop()
 

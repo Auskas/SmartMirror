@@ -7,7 +7,6 @@ import datetime
 import time
 import logging
 from PIL import Image, ImageTk
-import logging
 
 class Spartak:
 

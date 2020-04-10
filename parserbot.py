@@ -10,13 +10,21 @@ class ParserBot:
     
     def __init__(self):
         self.logger = logging.getLogger('Gesell.yandexbot.ParserBot')
+        if __name__ == '__main__': # Creates a logger if the module is called directly.
+            ch = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.addHandler(ch)
         self.url = 'https://yandex.ru/'
         self.url_calendar = 'https://www.sports.ru/spartak/calendar/'
         self.url_marquee_news = 'https://www.newsru.com'
         self.url_astro = 'https://www.go-astronomy.com/solar-system/event-calendar.htm'
+        self.url_covid = 'https://www.worldometers.info/coronavirus/'
         self.logger.debug('An instance of ParserBot has been created.')
         self.news = []
         self.rates_string = ''
+        self.covid_figures = []
 
     def get_page(self, link):
         """ Loads a web page using 'requests' module. Returns the result as text if the status is OK.
@@ -98,7 +106,24 @@ class ParserBot:
                 break
         if len(new_news) > 0:
             self.news = new_news[:]
-    
+
+    def covid(self):
+        res = self.get_page(self.url_covid)
+        if res == False:
+            return None
+        self.covid_figures = []
+        soup = bs4.BeautifulSoup(res, features='html.parser')
+        figures = soup.find_all('div', class_='maincounter-number')
+        for figure in figures:
+            self.covid_figures.append(figure.getText())
+        national_figures = soup.find_all('tr')
+        for nation in national_figures:
+            country = nation.getText()
+            if country.find('Russia') != -1:
+                #print(nation.getText().split())
+                self.covid_figures.extend(country.split()[1:6])
+                break
+
     def bot(self):
         while True:
             self.rates()
@@ -115,8 +140,17 @@ class ParserBot:
             else:
                 time.sleep(3600)
 
+    def covidbot(self):
+        while True:
+            self.covid()
+            if len(self.covid_figures) < 8:
+                time.sleep(3600)
+            else:
+                time.sleep(43200)
+
 if __name__ == '__main__':
     a = ParserBot()
-    a.marquee_news()
+    a.covid()
+    print(a.covid_figures)
 
 __version__ = '0.01' # 20.11.2019    

@@ -18,7 +18,7 @@ class VoiceAssistant():
         self.r = sr.Recognizer()
         self.logger.info('Voice assistant has been initialized.')
         self.cmd = {'youtube' : set(), 'weather': True, 'stocks': True,
-                    'marquee': True, 'spartak': True, 'clock': True,
+                    'marquee': True, 'spartak': True, 'clock': True, 'covid': True,
                     'gesturesMode': False}
         self.hide_commands = ('убрать', 'убери', 'скрыть', 'скрой', 
                               'закрыть', 'закрой', 'выключи', 'выключить', 
@@ -73,8 +73,9 @@ class VoiceAssistant():
             self.cmd['spartak'], 
             self.cmd['marquee'],
             self.cmd['stocks'], 
-            self.cmd['weather']
-            ) = False, False, False, False, False
+            self.cmd['weather'],
+            self.cmd['covid']
+            ) = False, False, False, False, False, False
             self.cmd['youtube'].add('playback stop')
 
         elif self.second_part_command(cmd) and \
@@ -90,8 +91,9 @@ class VoiceAssistant():
             self.cmd['spartak'], 
             self.cmd['marquee'],
             self.cmd['stocks'], 
-            self.cmd['weather']
-            ) = True, True, True, True, True
+            self.cmd['weather'],
+            self.cmd['covid']
+            ) = True, True, True, True, True, True
             self.cmd['youtube'].add('playback resume')
             
         elif cmd.find('часы') != -1 and self.second_part_command(cmd) == False:
@@ -125,6 +127,12 @@ class VoiceAssistant():
         elif self.second_part_command(cmd) and \
             (cmd.find('строка') != -1 or cmd.find('новост') != -1):
             self.cmd['marquee'] = True
+
+        elif cmd.find('вирус') != -1 and self.second_part_command(cmd) == False:
+            self.cmd['covid'] = False
+
+        elif cmd.find('вирус') != -1 and self.second_part_command(cmd):
+            self.cmd['covid'] = True
             
         elif cmd.find('полный экран') != -1 or \
              cmd.find('весь экран') != -1 or \

@@ -26,7 +26,7 @@
 from tensorflow.keras.models import load_model
 import numpy as np
 import cv2
-import os, copy
+import os, sys, copy
 import logging
 
 class GesturesRecognizer:
@@ -54,6 +54,8 @@ class GesturesRecognizer:
             self.is_face_detected = True
             self.command = 'None'
             self.camera_found = False
+            self.diff = 0
+            self.exposure_time = 0
         else:
             self.logger.info('A camera device has been found on board.')
             self.camera_found = True
@@ -80,7 +82,7 @@ class GesturesRecognizer:
             #self.logger.debug(f'Contrast {self.cam.get(11)}')
             #self.cam.set(10, -5.0) # Sets the brightness of the camera.
             #self.cam.set(11, 150) # Sets the contrast of the camera.
-            self.cam.set(10, -1) # Sets the brightness of the camera.
+            self.cam.set(10, 50) # Sets the brightness of the camera.
             self.cam.set(11, 80) # Sets the contrast of the camera.
             self.tips = []
             self.exposure_time = 0 # Increases by one every frame the tip of a finger is detected.
@@ -416,7 +418,11 @@ class GesturesRecognizer:
             cv2.imshow('Camera feed', frame)
 
 if __name__ == '__main__':
-    gestures_recognizer = GesturesRecognizer()
-    if gestures_recognizer.camera_found:
-        gestures_recognizer.tracker()
-    #gestures_recognizer.get_histogram()
+    try:
+        gestures_recognizer = GesturesRecognizer()
+        if gestures_recognizer.camera_found:
+            gestures_recognizer.tracker()
+        gestures_recognizer.get_histogram()
+    except KeyboardInterrupt:
+        gestures_recognizer.cam.release()
+        sys.exit()
