@@ -6,9 +6,9 @@
 #
 # The playback can be switched to full screen, returned back to its initial windowed size,
 # stopped, paused or resumed. The commands are saved in a set at voiceAssistant.cmd['youtube'].
-# The following commands are tracked (they are self-explanetary): 'fullscreen', 'window', 
+# The following commands are tracked (they are self-explanetary): 'fullscreen', 'window',
 # 'playback stop', 'playback resume', 'playback pause'.
-#  
+#
 # A dedicated voice command is used to search the most relevant video on Youtube: 'video search [topic]'
 #
 # The pointing finger gesture controls the volume - a volume bar appears on top of the playback widget.
@@ -45,21 +45,21 @@ class Youtuber:
         self.gesturesAssistant = gesturesAssistant
         self.waveWidget = waveWidget
         self.volumeWidget = volumeWidget
-        # self.w and self.h are the dimension of the main window. 
+        # self.w and self.h are the dimension of the main window.
         # The variables are used to switch the video into the fullscreen mode.
         self.w, self.h = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
         self.voiceAssistant = voiceAssistant
         _isMacOS   = sys.platform.startswith('darwin')
         _isWindows = sys.platform.startswith('win')
         _isLinux = sys.platform.startswith('linux')
-        args = ['--video-wallpaper', '--play-and-exit', '--verbose=0', '--aout=alsa',
-                '--vout=X11', '--network-caching=1000', '--no-ts-trust-pcr', '--ts-seek-percent'] 
+        args = ['--video-wallpaper', '--play-and-exit', '--verbose=0', '--logfile=vlc-log.txt',
+                '--vout=X11', '--network-caching=1000', '--no-ts-trust-pcr', '--ts-seek-percent']
                #'--no-ts-trust-pcr', '--ts-seek-percent',  '--file-logging', '--logfile=vlc-log.txt', '--aout=alsa'
         if _isLinux:
             args.append('--no-xlib')
         # Below are some Youtube links for testing purposes. Leave one uncommented to see it on the screen.
         #self.url = str('https://www.youtube.com/watch?v=1w7OgIMMRc4')
-        #self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
+        # self.url = str('https://www.youtube.com/watch?v=9Auq9mYxFEE') # Sky News
         #self.url = str('https://www.youtube.com/watch?v=fdN46JyP1lI') # Football Club 1
         #self.url = str('https://www.youtube.com/watch?v=-fLF_ejuOjs&pbjreload=10') # Football Club 2
         #self.url = str('https://www.youtube.com/watch?v=P-_lx0ysHfw') # Spartak
@@ -68,24 +68,25 @@ class Youtuber:
         #self.url = str('https://www.youtube.com/watch?v=RjIjKNcr_fk') # Al Jazeera
         self.url = str('https://www.youtube.com/watch?v=dI4jr5HyuT0') # NTV Russia live
         #self.url = str('https://www.youtube.com/watch?v=qFs5CtoEfDo') # Редакция
-        
+        #self.url = str('https://www.youtube.com/watch?v=G0jtWkUXyqM')
+
         self.instance = vlc.Instance(args)
-        
+
         # Creating the media object (Youtube video URL).
         #self.media = self.instance.media_new(self.url)
-        
+
         # Creating an instance of MediaList object and assigning it a tuple containing only one URL from Youtube.
         self.media_list = self.instance.media_list_new((self.url, ))
 
         # Creating an instance of the player.
         self.player = self.instance.media_player_new()
         self.player.audio_set_volume(100)
-        
+
         # Creating a new MediaListPlayer instance and associating the player and playlist with it.
         self.list_player = self.instance.media_list_player_new()
         self.list_player.set_media_player(self.player)
         self.list_player.set_media_list(self.media_list)
-        
+
         # Videos are played in the canvas, which size can be adjusted in order to show it in the fullscreen mode.
         self.video_window_width = int(self.w * 0.3)
         self.video_window_height = int(self.video_window_width * self.h / self.w)
@@ -103,6 +104,7 @@ class Youtuber:
 
         self.audio = alsaaudio.Mixer()
         self.audio_volume = self.audio.getvolume()[0] # system audio volume
+        print(f'Audio volume {self.audio_volume}')
 
         self.list_player.play()
         self.video_status = 'running'
@@ -128,24 +130,26 @@ class Youtuber:
                         self.video_fullscreen_status()
                         self.list_player.play()
                     self.saved_video_status = None
-                if self.gesturesAssistant.command == 'VoiceControl':
+                if self.gesturesAssistant.command == 'VoiceControl' or \
+                   self.gesturesAssistant.command == 'RemoteControl':
                     self.logger.debug('Voice control gesture detected!')
 
-                    # Saves the current playback volume. Mutes the playback volume in order to 
+                    # Saves the current playback volume. Mutes the playback volume in order to
                     # allow the user to give a voice command in a quite environment.
                     volume = self.player.audio_get_volume()
                     if volume > 0:
-                        self.player.audio_set_volume(0)    
+                        self.player.audio_set_volume(0)
                     time.sleep(0.5)
 
-                    # Launches the playback of Wave widget as well as the chime.
-                    siriChimeThread = threading.Thread(target=self.waveWidget.play)
-                    siriChimeThread.start()
-                    self.waveWidget.play()
-                    self.waveWidget.change_status()
+                    if self.gesturesAssistant.command == 'VoiceControl':
+                        # Launches the playback of Wave widget as well as the chime.
+                        siriChimeThread = threading.Thread(target=self.waveWidget.play)
+                        siriChimeThread.start()
+                        self.waveWidget.play()
+                        self.waveWidget.change_status()
 
-                    # Launches myCommand method of voiceAssistant to get user's command.
-                    self.voiceAssistant.myCommand()
+                        # Launches myCommand method of voiceAssistant to get user's command.
+                        self.voiceAssistant.myCommand()
 
                     # If there is at least one command associated with the video playback,
                     # looks for the commands.
@@ -177,8 +181,8 @@ class Youtuber:
                                 topic = c.replace('video search ', '')
                                 self.logger.debug(f'Processing video request {topic}.')
                                 self.search(topic)
-
-                    self.waveWidget.change_status()
+                    if self.gesturesAssistant.command == 'VoiceControl':
+                        self.waveWidget.change_status()
                     # Restores the playback volume to the saved value.
                     self.player.audio_set_volume(volume)
                     # Removes all the voice commands related to the widget by making a new empty set.
@@ -199,7 +203,7 @@ class Youtuber:
                     elif audio_diff > 0 and audio_diff + self.audio_volume > 100:
                         self.audio_volume = 100
                         self.audio.setvolume(self.audio_volume)
-                    # If the finger moves to the left and there is enough space for turning the volume down. 
+                    # If the finger moves to the left and there is enough space for turning the volume down.
                     elif audio_diff < 0 and abs(audio_diff) < self.audio_volume:
                         self.audio_volume += audio_diff
                         self.audio.setvolume(self.audio_volume)
@@ -223,7 +227,7 @@ class Youtuber:
                         self.volume_widget_timeout -= 1
 
                 time.sleep(0.05)
-            
+
     def video_fullscreen_status(self):
         """ The method is used to place the widget back either in the fullscreen or windowed mode
             based on the mode when the playback is stopped.
@@ -235,36 +239,36 @@ class Youtuber:
         else:
             self.widgetCanvas.place(relx=0.97, rely=0.8, anchor='se')
             self.widgetCanvas.config(width=self.video_window_width, height=self.video_window_height)
-            
+
     def video_stop(self):
-        """ The method as if stops the playback of the widget. In fact it pauses the playback and changes 
+        """ The method as if stops the playback of the widget. In fact it pauses the playback and changes
             its size to zero."""
         self.widgetCanvas.config(width=0, height=0)
         self.list_player.pause()
         self.video_status = 'stopped'
-     
+
     def search(self, topic):
         """ The method is used to get Youtube link of the desired topic.
             It loads the webpage using a proper request and finds the URL of the most relevant video.
             At the end it calls change_url method to actually change the URL.
             Arguments: topic as a string."""
-        
+
         self.logger.debug(f'Youtube URL searching for {topic}...')
         query_string = urllib.parse.urlencode({"search_query" : topic})
-        
+
         try:
             html_content = urllib.request.urlopen("http://www.youtube.com/results?" + query_string)
             search_results = re.findall(r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
-            
+
         except Exception as error:
             self.logger.debug(f'Cannot load Youtube: {error}')
-        
+
         try:
             self.logger.debug('Found the URL for the requested video...')
             self.change_url("https://www.youtube.com/watch?v=" + search_results[0])
         except Exception as error:
             self.logger.debug(f'Search results are empty. {error}')
-        
+
     def change_url(self, url):
         """ The method is used to change video's URL.
         It stops the player, creates a media object with the requested source,
@@ -276,17 +280,17 @@ class Youtuber:
         # from the media list, adds target URL to the media list, virtually presses next video in
         # the player and finally resumes the playback.
         self.list_player.pause()
-        
-        self.media_list.remove_index(0)        
-        self.media_list.add_media(url)        
+
+        self.media_list.remove_index(0)
+        self.media_list.add_media(url)
         self.list_player.next()
 
-        self.player.set_xwindow(self.widget_canvas_id)        
+        self.player.set_xwindow(self.widget_canvas_id)
 
         self.list_player.play()
-        
+
         self.video_status = 'running'
-        
+
         self.logger.debug('The URL has been changed.')
 
     def set_window(self):
@@ -320,15 +324,19 @@ if __name__ == '__main__':
                 self.cmd['youtube'] = (choice(('video search василий уткин футбольный клуб',
                                     'video search iron maiden the trooper live',
                                     'video search красава',
-                                    'video search world of tanks merceneries', 
-                                    'video search liverpool fc', 
+                                    'video search world of tanks merceneries',
+                                    'video search liverpool fc',
                                     'video search редакция',
                                     'video search hallowed be thy name live')),)
 
         class GesturesAssistant:
             def __init__(self):
-                self.command = 'VoiceControl'
-                
+                #self.command = 'VoiceControl'
+                self.command = 'None'
+                self.is_face_detected = True
+                self.diff = 0
+                self.exposure_time = 0
+
         class WaveWidget:
             def __init__(self):
                 self.status = True
@@ -340,6 +348,10 @@ if __name__ == '__main__':
                 else:
                     self.status = True
 
+        class VolumeWidget:
+            def __init__(self):
+                self.is_concealed = True
+
         window = Tk()
         window.title('Main Window')
         window.configure(bg='black')
@@ -349,7 +361,8 @@ if __name__ == '__main__':
         voiceAssistant = VoiceAssistant()
         gesturesAssistant = GesturesAssistant()
         waveWidget = WaveWidget()
-        youtuber = Youtuber(window, gesturesAssistant, voiceAssistant, waveWidget)
+        volumeWidget = VolumeWidget()
+        youtuber = Youtuber(window, gesturesAssistant, voiceAssistant, waveWidget, volumeWidget)
         #youtuber.set_fullscreen()
         youtuberThread = threading.Thread(target=youtuber.status)
         youtuberThread.daemon = True

@@ -58,12 +58,13 @@ class VoiceAssistant():
         """ Gets a string of recognized speech as cmd. 
             Checks if there are any sort of commands in it.
             Modifies self.cmd according to the detected commands."""
+        print(f'The following command has been received: {cmd}')
 
         if self.second_part_command(cmd) == False and \
             (
             cmd.find('все виджеты') != -1 or \
             cmd.find('all the widgets') != -1 or \
-            cmd.find('all widgets') or \
+            cmd.find('all widgets') != -1 or \
             cmd.find('всю графику') != -1 or \
             cmd.find('всё') != -1
             ):
@@ -77,6 +78,7 @@ class VoiceAssistant():
             self.cmd['covid']
             ) = False, False, False, False, False, False
             self.cmd['youtube'].add('playback stop')
+            self.logger.debug('All the widgets have been concealed!')
 
         elif self.second_part_command(cmd) and \
             (
@@ -95,6 +97,7 @@ class VoiceAssistant():
             self.cmd['covid']
             ) = True, True, True, True, True, True
             self.cmd['youtube'].add('playback resume')
+            self.logger.debug('All the widgets is being showing!')
             
         elif cmd.find('часы') != -1 and self.second_part_command(cmd) == False:
             self.cmd['clock'] = False

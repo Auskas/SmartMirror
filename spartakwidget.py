@@ -66,7 +66,7 @@ class Spartak:
                     self.teamLbl.config(text='', fg='lightblue', font=("SFUIText", 16, "bold"))
                     if self.hide_icon == False:
                         #self.icon.configure(image='')
-                        self.icon.config(state='hidden')
+                        self.icon.config(state='disabled')
                         self.hide_icon = True
             else:
                 if self.voiceAssistant.cmd['spartak']:
